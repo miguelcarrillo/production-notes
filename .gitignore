@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
+.env.local
+.env.*.local
+
+# Audio files (for now)
+public/audio/*
+!public/audio/.gitkeep
+
+# IDE
+.vscode/settings.json
