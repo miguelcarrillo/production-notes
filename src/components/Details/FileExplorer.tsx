@@ -1,41 +1,30 @@
-import { Download, Music, Play } from "lucide-react";
+import { Music, Play } from "lucide-react";
 import React from "react";
+import type { LocalFile } from "../../stores/productionStore"; // Import LocalFile
 import { useProductionStore } from "../../stores/productionStore";
-import type { MediaFile } from "../../types/production";
 
 export const FileExplorer: React.FC = () => {
-  const { currentProduction, timeline, loadAudioFile, playAudio } =
-    useProductionStore();
+  // Destructure the new state and actions
+  const { localFiles, loadAudioFile, playAudio } = useProductionStore();
 
-  if (!currentProduction) {
-    return (
-      <div className="p-4 text-gray-400 text-center">No production loaded</div>
-    );
-  }
+  // The logic now revolves around localFiles, not moment.media
+  const mediaFiles = localFiles;
 
-  const currentMoment = currentProduction.moments[timeline.currentMomentIndex];
-  const mediaFiles = currentMoment?.media || [];
-
-  const handleFileClick = (file: MediaFile) => {
-    loadAudioFile(file);
+  const handleFileClick = (file: LocalFile) => {
+    // We pass the object with the handle to loadAudioFile
+    loadAudioFile({ handle: file.handle } as any);
   };
 
-  const handlePlayClick = (file: MediaFile, event: React.MouseEvent) => {
-    event.stopPropagation();
-    loadAudioFile(file);
+  // Add a double-click handler to load and play immediately
+  const handleDoubleClick = (file: LocalFile) => {
+    loadAudioFile({ handle: file.handle } as any);
     playAudio();
   };
 
-  const formatFileSize = (bytes: number): string => {
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
-  };
-
-  const formatDuration = (seconds?: number): string => {
-    if (!seconds) return "--:--";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const handlePlayClick = (file: LocalFile, event: React.MouseEvent) => {
+    event.stopPropagation();
+    loadAudioFile({ handle: file.handle } as any);
+    playAudio();
   };
 
   return (
@@ -44,7 +33,7 @@ export const FileExplorer: React.FC = () => {
       <div className="p-4 border-b border-gray-600">
         <p className="text-sm text-gray-400">
           {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""} in
-          current moment
+          project folder
         </p>
       </div>
 
@@ -53,20 +42,25 @@ export const FileExplorer: React.FC = () => {
         {mediaFiles.length === 0 ? (
           <div className="p-4 text-center text-gray-400">
             <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No media files in this moment</p>
+            <p className="text-sm">No audio folder loaded</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Use the button in the Timeline column.
+            </p>
           </div>
         ) : (
           <div className="space-y-1">
             {mediaFiles.map((file) => (
               <div
-                key={file.id}
+                key={file.path}
                 className="group flex items-center p-3 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 last:border-b-0"
                 onClick={() => handleFileClick(file)}
+                onDoubleClick={() => handleDoubleClick(file)} // Add double-click
                 draggable
                 onDragStart={(e) => {
+                  // We need to pass the handle's info. A simple path/name is enough.
                   e.dataTransfer.setData(
-                    "application/json",
-                    JSON.stringify(file)
+                    "application/local-file-path",
+                    file.path
                   );
                   e.dataTransfer.effectAllowed = "copy";
                 }}
@@ -93,14 +87,9 @@ export const FileExplorer: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-400 mt-1">
-                    <span>{formatDuration(file.duration)}</span>
-                    <span>{formatFileSize(file.size)}</span>
+                    {/* We don't have this info yet, so we can hide it */}
+                    <span className="truncate">{file.path}</span>
                   </div>
-                </div>
-
-                {/* Drag Handle */}
-                <div className="flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Download className="w-4 h-4 text-gray-500 rotate-90" />
                 </div>
               </div>
             ))}

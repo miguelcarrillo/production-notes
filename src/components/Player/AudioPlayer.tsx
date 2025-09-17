@@ -1,5 +1,6 @@
-import { Pause, Play, Square, Volume2 } from "lucide-react";
-import React, { useRef } from "react";
+import { Pause, Play, Repeat, Square, Volume2 } from "lucide-react"; // + Import Repeat
+import React, { useEffect, useRef } from "react";
+import WaveSurfer from "wavesurfer.js";
 import { useProductionStore } from "../../stores/productionStore";
 
 export const AudioPlayer: React.FC = () => {
@@ -10,19 +11,116 @@ export const AudioPlayer: React.FC = () => {
     stopAudio,
     setVolume,
     setCurrentTime,
+    toggleLoop, // + Get toggleLoop
+    loadAudioFile, // + Get loadAudioFile
+    localFiles, // + Get localFiles for drop handling
   } = useProductionStore();
 
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const volumeRef = useRef<HTMLInputElement>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const wavesurfer = useRef<WaveSurfer | null>(null);
+
+  // Initialize WaveSurfer
+  useEffect(() => {
+    if (audioPlayer.currentFile && waveformRef.current) {
+      console.log("waveformRef.current:", waveformRef.current);
+      console.log("Initializing WaveSurfer...");
+      wavesurfer.current = WaveSurfer.create({
+        container: waveformRef.current,
+        waveColor: "#4A5568", // gray-600
+        progressColor: "#4299E1", // primary-500
+        barWidth: 2,
+        barRadius: 3,
+        height: 80,
+        cursorWidth: 0,
+      });
+
+      // Sync WaveSurfer's seek with our state
+      wavesurfer.current.on("seeking", (time) => {
+        console.log("Seeking to time:", time);
+        setCurrentTime(time);
+      });
+
+      // Debug WaveSurfer events
+      wavesurfer.current.on("ready", () => {
+        console.log("WaveSurfer is ready.");
+      });
+
+      wavesurfer.current.on("error", (error) => {
+        console.error("WaveSurfer error:", error);
+      });
+
+      return () => {
+        console.log("Destroying WaveSurfer instance...");
+        wavesurfer.current?.destroy();
+      };
+    } else {
+      console.warn(
+        "WaveSurfer initialization skipped. Either no file is loaded or waveformRef is null."
+      );
+    }
+  }, [audioPlayer.currentFile]);
+
+  // Load audio into WaveSurfer when the file changes
+  useEffect(() => {
+    if (audioPlayer.currentFile?.handle && wavesurfer.current) {
+      const loadWaveform = async () => {
+        try {
+          console.log(
+            "Loading audio file into WaveSurfer:",
+            audioPlayer.currentFile?.name
+          );
+          const file = await audioPlayer.currentFile!.handle!.getFile();
+          const objectURL = URL.createObjectURL(file);
+          wavesurfer.current?.load(objectURL);
+        } catch (error) {
+          console.error("Error loading audio file into WaveSurfer:", error);
+        }
+      };
+      loadWaveform();
+    } else {
+      console.warn(
+        "No valid audio file to load into WaveSurfer.",
+        audioPlayer.currentFile
+      );
+    }
+  }, [audioPlayer.currentFile]);
+
+  // Sync WaveSurfer play/pause with our state
+  useEffect(() => {
+    if (wavesurfer.current) {
+      if (audioPlayer.isPlaying) {
+        console.log("Playing audio in WaveSurfer.");
+        wavesurfer.current.play();
+      } else {
+        console.log("Pausing audio in WaveSurfer.");
+        wavesurfer.current.pause();
+      }
+    }
+  }, [audioPlayer.isPlaying]);
 
   // Handle drag and drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     try {
-      const fileData = e.dataTransfer.getData("application/json");
-      const file = JSON.parse(fileData);
-      // In a real app, you'd load the audio file here
-      console.log("Dropped file:", file);
+      const filePath = e.dataTransfer.getData("application/local-file-path");
+      console.log("Dropped file path:", filePath);
+      if (filePath) {
+        const fileToLoad = localFiles.find((f) => f.path === filePath);
+        console.log("File to load:", fileToLoad);
+        if (fileToLoad) {
+          loadAudioFile({
+            id: fileToLoad.name,
+            name: fileToLoad.name,
+            path: fileToLoad.path,
+            type: "audio",
+            size: 0, // Placeholder, as size is not available
+            createdAt: new Date(), // Placeholder
+            handle: fileToLoad.handle,
+          });
+        } else {
+          console.warn("No matching file found in localFiles.");
+        }
+      }
     } catch (error) {
       console.error("Error handling dropped file:", error);
     }
@@ -30,12 +128,6 @@ export const AudioPlayer: React.FC = () => {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handlePlayPause = () => {
@@ -46,25 +138,13 @@ export const AudioPlayer: React.FC = () => {
     }
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-  };
-
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
     setCurrentTime(newTime);
   };
 
-  // Mock waveform data
-  const mockWaveform = Array.from(
-    { length: 100 },
-    (_, i) => Math.sin(i * 0.1) * 50 + Math.random() * 30 + 20
-  );
-
   return (
     <div className="h-full flex flex-col">
-      {/* Drop Zone */}
       <div
         className="flex-1 flex flex-col justify-center p-4"
         onDrop={handleDrop}
@@ -75,38 +155,19 @@ export const AudioPlayer: React.FC = () => {
             {/* Current File Info */}
             <div className="text-center">
               <h5 className="font-medium text-white mb-1">
-                {audioPlayer.currentFile.name}
+                {audioPlayer.currentFile?.name || "Unknown File"}
               </h5>
-              <p className="text-sm text-gray-400">
-                {formatTime(audioPlayer.currentTime)} /{" "}
-                {formatTime(audioPlayer.duration)}
-              </p>
             </div>
 
             {/* Waveform Visualization */}
-            <div className="bg-gray-800 rounded-lg p-4 h-24">
-              <div className="flex items-end justify-center h-full space-x-1">
-                {mockWaveform.map((height, index) => (
-                  <div
-                    key={index}
-                    className={`w-1 rounded-t transition-colors ${
-                      index <
-                      (audioPlayer.currentTime / audioPlayer.duration) * 100
-                        ? "bg-primary-500"
-                        : "bg-gray-600"
-                    }`}
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
-              </div>
-            </div>
+            <div ref={waveformRef} className="w-full h-24" />
 
             {/* Progress Bar */}
             <div className="space-y-2">
               <input
                 type="range"
                 min="0"
-                max={audioPlayer.duration}
+                max={audioPlayer.duration || 0}
                 value={audioPlayer.currentTime}
                 onChange={handleTimeChange}
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
@@ -115,6 +176,18 @@ export const AudioPlayer: React.FC = () => {
 
             {/* Controls */}
             <div className="flex items-center justify-center space-x-4">
+              <button
+                onClick={toggleLoop}
+                className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                  audioPlayer.loop
+                    ? "bg-primary-600 text-white"
+                    : "bg-gray-600 hover:bg-gray-700 text-white"
+                }`}
+                title="Toggle Loop"
+              >
+                <Repeat className="w-5 h-5" />
+              </button>
+
               <button
                 onClick={handlePlayPause}
                 disabled={!audioPlayer.currentFile}
@@ -140,13 +213,12 @@ export const AudioPlayer: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
               <input
-                ref={volumeRef}
                 type="range"
                 min="0"
                 max="1"
                 step="0.01"
                 value={audioPlayer.volume}
-                onChange={handleVolumeChange}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
                 className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
               />
               <span className="text-sm text-gray-400 min-w-[3rem]">
@@ -160,11 +232,8 @@ export const AudioPlayer: React.FC = () => {
             <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <h5 className="font-medium mb-2">No Audio Loaded</h5>
             <p className="text-sm mb-4">
-              Drag an audio file here or select from the file explorer
+              Drag an audio file here from the project folder
             </p>
-            <div className="text-xs text-gray-500">
-              Supported formats: MP3, WAV, OGG
-            </div>
           </div>
         )}
       </div>

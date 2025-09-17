@@ -20,21 +20,21 @@ export const MainLayout: React.FC = () => {
       {/* Main 3-column layout */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Column 1: Timeline */}
-        <div className="w-1/4 min-w-[300px] bg-gray-900 border-r border-gray-700 flex flex-col">
+        <div className="w-2/8 min-w-[300px] bg-gray-900 border-r border-gray-700 flex flex-col">
           <div className="flex-1 overflow-hidden">
             <Timeline />
           </div>
         </div>
 
         {/* Column 2: Details */}
-        <div className="w-1/4 min-w-[300px] bg-gray-800 border-r border-gray-700 flex flex-col">
+        <div className="w-3/8 min-w-[300px] bg-gray-800 border-r border-gray-700 flex flex-col">
           <div className="flex-1 overflow-hidden">
             <Details />
           </div>
         </div>
 
         {/* Column 3: Player */}
-        <div className="w-2/4 min-w-[300px] bg-gray-750 flex flex-col">
+        <div className="w-3/8 min-w-[300px] bg-gray-750 flex flex-col">
           <div className="flex-1 overflow-hidden">
             <Player />
           </div>
