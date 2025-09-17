@@ -1,30 +1,25 @@
 import { Music, Play } from "lucide-react";
 import React from "react";
-import type { LocalFile } from "../../stores/productionStore"; // Import LocalFile
+import type { LocalFile } from "../../stores/productionStore";
 import { useProductionStore } from "../../stores/productionStore";
 
 export const FileExplorer: React.FC = () => {
-  // Destructure the new state and actions
-  const { localFiles, loadAudioFile, playAudio } = useProductionStore();
+  // FIX: Removed `playAudio` as it no longer exists in the store.
+  const { localFiles, loadAudioFile } = useProductionStore();
 
-  // The logic now revolves around localFiles, not moment.media
   const mediaFiles = localFiles;
 
-  const handleFileClick = (file: LocalFile) => {
-    // We pass the object with the handle to loadAudioFile
-    loadAudioFile({ handle: file.handle } as any);
+  // This function now handles both single-click and the play button's click.
+  // It loads the file, and the player's `autoPlay` prop handles playback.
+  const handleLoadAndPlay = (file: LocalFile) => {
+    // FIX: Removed the unnecessary `as any` cast for better type safety.
+    loadAudioFile({ handle: file.handle });
   };
 
-  // Add a double-click handler to load and play immediately
-  const handleDoubleClick = (file: LocalFile) => {
-    loadAudioFile({ handle: file.handle } as any);
-    playAudio();
-  };
-
-  const handlePlayClick = (file: LocalFile, event: React.MouseEvent) => {
+  // This handler prevents the click on the button from also triggering the click on the parent div.
+  const handlePlayButtonClick = (file: LocalFile, event: React.MouseEvent) => {
     event.stopPropagation();
-    loadAudioFile({ handle: file.handle } as any);
-    playAudio();
+    handleLoadAndPlay(file);
   };
 
   return (
@@ -53,11 +48,11 @@ export const FileExplorer: React.FC = () => {
               <div
                 key={file.path}
                 className="group flex items-center p-3 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 last:border-b-0"
-                onClick={() => handleFileClick(file)}
-                onDoubleClick={() => handleDoubleClick(file)} // Add double-click
+                // FIX: Both single-click and double-click now do the same thing.
+                // We'll use single-click as the primary action.
+                onClick={() => handleLoadAndPlay(file)}
                 draggable
                 onDragStart={(e) => {
-                  // We need to pass the handle's info. A simple path/name is enough.
                   e.dataTransfer.setData(
                     "application/local-file-path",
                     file.path
@@ -79,7 +74,7 @@ export const FileExplorer: React.FC = () => {
                       {file.name}
                     </h5>
                     <button
-                      onClick={(e) => handlePlayClick(file, e)}
+                      onClick={(e) => handlePlayButtonClick(file, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-600 rounded transition-all"
                       title="Play file"
                     >
@@ -87,7 +82,6 @@ export const FileExplorer: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-400 mt-1">
-                    {/* We don't have this info yet, so we can hide it */}
                     <span className="truncate">{file.path}</span>
                   </div>
                 </div>

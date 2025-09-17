@@ -7,6 +7,7 @@ export interface MediaFile {
   duration?: number; // in seconds for audio/video
   createdAt: Date;
   handle?: FileSystemFileHandle;
+  src?: string;
 }
 
 export interface Moment {
@@ -45,12 +46,6 @@ export interface TimelineState {
 // Audio player state
 export interface AudioPlayerState {
   currentFile: MediaFile | null;
-  isPlaying: boolean;
-  volume: number; // 0-1
-  currentTime: number;
-  duration: number;
-  loop: boolean; // + Add loop property
-  waveform?: number[]; // for visualization
 }
 
 // Soundboard

@@ -1,5 +1,5 @@
 import React from "react";
-import { AudioPlayer } from "./AudioPlayer";
+import { AudioPlayerComponent as AudioPlayer } from "./AudioPlayer";
 import { Soundboard } from "./Soundboard";
 
 export const Player: React.FC = () => {

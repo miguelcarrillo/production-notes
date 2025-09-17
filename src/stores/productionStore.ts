@@ -50,13 +50,7 @@ interface ProductionStore {
   updateTimelineTime: () => void;
 
   // Audio player actions
-  loadAudioFile: (file: MediaFile) => void;
-  playAudio: () => void;
-  pauseAudio: () => void;
-  stopAudio: () => void;
-  setVolume: (volume: number) => void;
-  setCurrentTime: (time: number) => void;
-  toggleLoop: () => void; // + Add toggleLoop action
+  loadAudioFile: (file: Partial<MediaFile>) => void; // Can accept a partial file now
 
   // Soundboard actions
   searchSounds: (query: string) => Promise<void>;
@@ -75,6 +69,9 @@ interface ProductionStore {
 
 // + Create a single audio instance outside the store
 const audio = new Audio();
+
+// A variable to keep track of the last created Blob URL so we can revoke it.
+let currentObjectUrl: string | null = null;
 
 export const useProductionStore = create<ProductionStore>()(
   devtools(
@@ -100,12 +97,6 @@ export const useProductionStore = create<ProductionStore>()(
         set((state) => ({
           audioPlayer: { ...state.audioPlayer, duration: audio.duration },
         }));
-      audio.onended = () => {
-        // When the audio finishes, stop it (resets time) unless it's looping
-        if (!audio.loop) {
-          get().stopAudio();
-        }
-      };
 
       return {
         // Initial state
@@ -122,11 +113,6 @@ export const useProductionStore = create<ProductionStore>()(
 
         audioPlayer: {
           currentFile: null,
-          isPlaying: false,
-          volume: 1,
-          currentTime: 0,
-          duration: 0,
-          loop: false, // + Add loop state
         },
 
         soundboard: {
@@ -240,67 +226,39 @@ export const useProductionStore = create<ProductionStore>()(
 
         // --- REWRITE AUDIO ACTIONS ---
 
-        loadAudioFile: async (file) => {
-          const { localFiles } = get();
-          // If it's a drag/drop, we might get the path
-          const filePath = typeof file === "string" ? file : null;
-          const localFile = filePath
-            ? localFiles.find((f) => f.path === filePath)
-            : file;
+        // --- REWRITE the loadAudioFile action ---
+        loadAudioFile: (file) => {
+          if (!file.handle) return;
 
-          if (localFile?.handle) {
-            const fileObject = await localFile.handle.getFile();
-            const objectURL = URL.createObjectURL(fileObject);
-
-            // If there was a previous track, revoke its URL to prevent memory leaks
-            if (audio.src.startsWith("blob:")) {
-              URL.revokeObjectURL(audio.src);
-            }
-            audio.src = objectURL;
-
-            const mediaFile = await get().loadFileFromHandle(localFile.handle);
-            if (mediaFile) {
-              set((state) => ({
-                audioPlayer: {
-                  ...state.audioPlayer,
-                  currentFile: { ...mediaFile, handle: localFile.handle },
-                  currentTime: 0,
-                },
-              }));
-            }
+          // Revoke the previous Blob URL to prevent memory leaks
+          if (currentObjectUrl) {
+            URL.revokeObjectURL(currentObjectUrl);
           }
-        },
 
-        playAudio: () => {
-          if (get().audioPlayer.currentFile) {
-            audio.play().catch((e) => console.error("Error playing audio:", e));
-          }
-        },
+          get()
+            .loadFileFromHandle(file.handle as FileSystemFileHandle)
+            .then(async (mediaFile) => {
+              if (mediaFile) {
+                const fileObject = await (
+                  file.handle as FileSystemFileHandle
+                ).getFile();
+                currentObjectUrl = URL.createObjectURL(fileObject); // Create the URL here
 
-        pauseAudio: () => {
-          audio.pause();
-        },
-
-        stopAudio: () => {
-          audio.pause();
-          audio.currentTime = 0;
-        },
-
-        setVolume: (volume) => {
-          audio.volume = Math.max(0, Math.min(1, volume));
-        },
-
-        setCurrentTime: (time) => {
-          audio.currentTime = time;
-        },
-
-        // + Add action for looping
-        toggleLoop: () => {
-          const willLoop = !audio.loop;
-          audio.loop = willLoop;
-          set((state) => ({
-            audioPlayer: { ...state.audioPlayer, loop: willLoop },
-          }));
+                set({
+                  audioPlayer: {
+                    // Store the complete file object, including the new src
+                    currentFile: {
+                      ...mediaFile,
+                      handle: file.handle,
+                      src: currentObjectUrl, // <-- The URL is now part of the state
+                    } as MediaFile,
+                  },
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error loading audio file:", error);
+            });
         },
 
         // Soundboard actions
