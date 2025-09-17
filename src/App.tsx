@@ -5,7 +5,9 @@ import { useProductionStore } from "./stores/productionStore"; // + Import the s
 
 function App() {
   useEffect(() => {
-    useProductionStore.getState().hydrateSoundboard();
+    const store = useProductionStore.getState();
+    store.hydrateSoundboard();
+    store.rehydrateDirectoryHandle(); // + Add this line
   }, []);
   return (
     <div className="App">

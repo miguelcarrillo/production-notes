@@ -6,13 +6,20 @@ export interface SoundboardState {
   sounds: SoundEffect[];
 }
 
+export interface StoredHandle {
+  id: string; // e.g., 'directoryHandle'
+  handle: FileSystemDirectoryHandle;
+}
+
 export class MySubClassedDexie extends Dexie {
   soundboard!: Table<SoundboardState>;
+  fileSystemHandles!: Table<StoredHandle>;
 
   constructor() {
     super("productionNotesDB");
     this.version(1).stores({
       soundboard: "id", // Primary key
+      fileSystemHandles: "id",
     });
   }
 }

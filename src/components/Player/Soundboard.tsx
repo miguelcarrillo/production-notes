@@ -1,4 +1,4 @@
-import { Play, Plus, Search, Square, Volume2, X } from "lucide-react";
+import { Play, Plus, Search, Square, X } from "lucide-react";
 import React, { useState } from "react";
 import { useProductionStore } from "../../stores/productionStore";
 
@@ -11,7 +11,9 @@ export const Soundboard: React.FC = () => {
     stopSoundEffect,
     removeSoundFromBoard,
     setSoundEffectVolume,
-    clearSearchResults, // + Get the new action
+    clearSearchResults,
+    playPreviewSound,
+    stopPreviewSound,
   } = useProductionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,6 +22,7 @@ export const Soundboard: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       await searchSounds(searchQuery.trim());
+      setSearchQuery(""); // Clear search box
     }
   };
 
@@ -28,6 +31,7 @@ export const Soundboard: React.FC = () => {
     if (sound?.isPlaying) {
       stopSoundEffect(soundId);
     } else {
+      // The playSoundEffect action will handle stopping other sounds if needed.
       playSoundEffect(soundId);
     }
   };
@@ -75,28 +79,57 @@ export const Soundboard: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
             <h5 className="font-medium text-gray-300 mb-3">Search Results</h5>
-            <div className="space-y-2">
-              {soundboard.searchResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <h6 className="text-sm font-medium text-white truncate">
-                      {result.name}
-                    </h6>
-                    <p className="text-xs text-gray-400">
-                      {result.duration.toFixed(1)}s • by {result.username}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => addSoundToBoard(result)}
-                    className="ml-3 p-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
+            {/* + Adjust layout to two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              {soundboard.searchResults.map((result) => {
+                const isPreviewPlaying =
+                  soundboard.playingPreviewId === result.id;
+
+                return (
+                  <div
+                    key={result.id}
+                    className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
                   >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <h6 className="text-sm font-medium text-white truncate">
+                        {result.name}
+                      </h6>
+                      <p className="text-xs text-gray-400">
+                        {result.duration.toFixed(1)}s • by {result.username}
+                      </p>
+                    </div>
+
+                    {/* + DYNAMIC PREVIEW BUTTON */}
+                    <button
+                      onClick={() =>
+                        isPreviewPlaying
+                          ? stopPreviewSound()
+                          : playPreviewSound(result)
+                      }
+                      className={`ml-3 p-2 text-white rounded transition-colors ${
+                        isPreviewPlaying
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                      title={isPreviewPlaying ? "Stop preview" : "Play preview"}
+                    >
+                      {isPreviewPlaying ? (
+                        <Square className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => addSoundToBoard(result)}
+                      className="ml-3 p-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
+                      title="Add to soundboard"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -105,7 +138,7 @@ export const Soundboard: React.FC = () => {
         <div className="p-4">
           <h5 className="font-medium text-gray-300 mb-3">Sound Effects</h5>
           {/* + Change grid-cols-2 to grid-cols-3 */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {soundboard.sounds.map((sound) => (
               <div
                 key={sound.id}
@@ -122,7 +155,7 @@ export const Soundboard: React.FC = () => {
                 {/* + Play/Stop Button: Smaller and Rounder */}
                 <button
                   onClick={() => handleSoundToggle(sound.id)}
-                  className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-colors ${
                     sound.isPlaying
                       ? "bg-red-600 hover:bg-red-700"
                       : "bg-primary-600 hover:bg-primary-700"
@@ -136,13 +169,12 @@ export const Soundboard: React.FC = () => {
                 </button>
 
                 {/* Sound Name */}
-                <h6 className="w-full text-sm font-medium text-white text-center mb-2 truncate">
+                <h6 className="w-full text-xs font-medium text-white text-center mb-2 truncate">
                   {sound.name}
                 </h6>
 
                 {/* Volume Control */}
-                <div className="flex items-center space-x-2">
-                  <Volume2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                <div className="flex items-center space-x-2 max-w-full">
                   <input
                     type="range"
                     min="0"
@@ -152,7 +184,7 @@ export const Soundboard: React.FC = () => {
                     onChange={(e) =>
                       handleVolumeChange(sound.id, parseFloat(e.target.value))
                     }
-                    className="flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-sm"
+                    className="max-w-full flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-sm"
                   />
                 </div>
               </div>

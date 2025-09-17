@@ -23,7 +23,10 @@ export const FileExplorer: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className="h-full flex flex-col overflow-hidden"
+      style={{ minHeight: "0px" }} // Explicitly set minHeight to ensure proper height calculation
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-600">
         <p className="text-sm text-gray-400">
@@ -31,9 +34,8 @@ export const FileExplorer: React.FC = () => {
           project folder
         </p>
       </div>
-
       {/* File List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
         {mediaFiles.length === 0 ? (
           <div className="p-4 text-center text-gray-400">
             <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -48,8 +50,6 @@ export const FileExplorer: React.FC = () => {
               <div
                 key={file.path}
                 className="group flex items-center p-3 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 last:border-b-0"
-                // FIX: Both single-click and double-click now do the same thing.
-                // We'll use single-click as the primary action.
                 onClick={() => handleLoadAndPlay(file)}
                 draggable
                 onDragStart={(e) => {

@@ -6,7 +6,6 @@ import AudioPlayer, {
 } from "react-modern-audio-player";
 import { useProductionStore } from "../../stores/productionStore";
 
-// Helper function remains the same
 const stringToHash = (str: string): number => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -17,10 +16,8 @@ const stringToHash = (str: string): number => {
   return Math.abs(hash);
 };
 
-// Layout constant remains the same
 const customInterfacePlacement: InterfaceGridTemplateArea = {
   artwork: "row1-2",
-  playList: "row1-3",
   trackInfo: "row2-2",
   trackTimeCurrent: "row3-1",
   progress: "row3-2",
@@ -31,22 +28,16 @@ const customInterfacePlacement: InterfaceGridTemplateArea = {
 };
 
 export const AudioPlayerComponent: React.FC = () => {
-  const { audioPlayer, loadAudioFile, localFiles } = useProductionStore();
+  const { audioPlayer, loadAudioFile, localFiles, setAudioPlayingState } =
+    useProductionStore();
 
   const handleDrop = (e: React.DragEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    try {
-      const filePath = e.dataTransfer.getData("application/local-file-path");
-      if (filePath) {
-        const fileToLoad = localFiles.find((f) => f.path === filePath);
-        if (fileToLoad) {
-          // This action now handles everything, including URL creation.
-          loadAudioFile({ handle: fileToLoad.handle });
-        }
-      }
-    } catch (error) {
-      console.error("Error handling dropped file:", error);
+    const filePath = e.dataTransfer.getData("application/local-file-path");
+    if (filePath) {
+      const fileToLoad = localFiles.find((f) => f.path === filePath);
+      if (fileToLoad) loadAudioFile({ handle: fileToLoad.handle });
     }
   };
 
@@ -55,7 +46,6 @@ export const AudioPlayerComponent: React.FC = () => {
     e.preventDefault();
   };
 
-  // If no file is loaded, or the file doesn't have a src URL yet.
   if (!audioPlayer.currentFile || !audioPlayer.currentFile.src) {
     return (
       <div
@@ -72,8 +62,6 @@ export const AudioPlayerComponent: React.FC = () => {
     );
   }
 
-  // The component is now incredibly simple. It just builds the playlist
-  // from the already-complete currentFile object. No more useEffect.
   const playListForPlayer: PlayList = [
     {
       name: audioPlayer.currentFile.name,
@@ -81,7 +69,7 @@ export const AudioPlayerComponent: React.FC = () => {
         audioPlayer.currentFile.path.split("/").pop()?.split(".")[0] ||
         "Unknown",
       img: "/vinyl-record.png",
-      src: audioPlayer.currentFile.src, // <-- Use the src directly from the store
+      src: audioPlayer.currentFile.src,
       id: stringToHash(audioPlayer.currentFile.id),
     },
   ];
@@ -95,14 +83,17 @@ export const AudioPlayerComponent: React.FC = () => {
       <AudioPlayer
         key={audioPlayer.currentFile.id}
         playList={playListForPlayer}
+        // FIX: Moved onPlay and onPause inside this object
         audioInitialState={{
-          isPlaying: true,
+          isPlaying: audioPlayer.isPlaying,
           curPlayId: stringToHash(audioPlayer.currentFile.id),
+          // Event handlers for the underlying <audio> element go here
+          onPlay: () => setAudioPlayingState(true, true),
+          onPause: () => setAudioPlayingState(false, true),
         }}
         activeUI={{
           all: true,
           progress: "waveform",
-          volumeSlider: true,
           artwork: false,
           playList: false,
           prevNnext: false,
