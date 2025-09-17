@@ -11,6 +11,7 @@ export const Soundboard: React.FC = () => {
     stopSoundEffect,
     removeSoundFromBoard,
     setSoundEffectVolume,
+    clearSearchResults, // + Get the new action
   } = useProductionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,7 +65,15 @@ export const Soundboard: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         {/* Search Results */}
         {soundboard.searchResults.length > 0 && (
-          <div className="p-4 border-b border-gray-600">
+          <div className="p-4 border-b border-gray-600 relative">
+            {/* + Close Button for Search Results */}
+            <button
+              onClick={clearSearchResults}
+              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-white"
+              title="Close search results"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <h5 className="font-medium text-gray-300 mb-3">Search Results</h5>
             <div className="space-y-2">
               {soundboard.searchResults.map((result) => (
@@ -95,11 +104,12 @@ export const Soundboard: React.FC = () => {
         {/* Sound Effects Grid */}
         <div className="p-4">
           <h5 className="font-medium text-gray-300 mb-3">Sound Effects</h5>
-          <div className="grid grid-cols-2 gap-3">
+          {/* + Change grid-cols-2 to grid-cols-3 */}
+          <div className="grid grid-cols-3 gap-3">
             {soundboard.sounds.map((sound) => (
               <div
                 key={sound.id}
-                className="group relative bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors"
+                className="group relative bg-gray-700 rounded-lg p-3 hover:bg-gray-600 transition-colors flex flex-col items-center"
               >
                 {/* Remove Button */}
                 <button
@@ -109,24 +119,24 @@ export const Soundboard: React.FC = () => {
                   <X className="w-3 h-3" />
                 </button>
 
-                {/* Play/Stop Button */}
+                {/* + Play/Stop Button: Smaller and Rounder */}
                 <button
                   onClick={() => handleSoundToggle(sound.id)}
-                  className={`w-full aspect-square rounded-lg flex items-center justify-center mb-2 transition-colors ${
+                  className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${
                     sound.isPlaying
                       ? "bg-red-600 hover:bg-red-700"
                       : "bg-primary-600 hover:bg-primary-700"
                   }`}
                 >
                   {sound.isPlaying ? (
-                    <Square className="w-6 h-6 text-white" />
+                    <Square className="w-5 h-5 text-white" />
                   ) : (
-                    <Play className="w-6 h-6 text-white ml-1" />
+                    <Play className="w-5 h-5 text-white ml-1" />
                   )}
                 </button>
 
                 {/* Sound Name */}
-                <h6 className="text-sm font-medium text-white text-center mb-2 truncate">
+                <h6 className="w-full text-sm font-medium text-white text-center mb-2 truncate">
                   {sound.name}
                 </h6>
 

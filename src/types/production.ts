@@ -46,6 +46,8 @@ export interface TimelineState {
 // Audio player state
 export interface AudioPlayerState {
   currentFile: MediaFile | null;
+  isPlaying: boolean;
+  pausedByUser: boolean; // Added to track if the user paused the audio
 }
 
 // Soundboard
