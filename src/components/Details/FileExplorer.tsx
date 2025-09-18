@@ -1,22 +1,18 @@
-import { Music, Play } from "lucide-react";
+import { Music, Play, RefreshCw } from "lucide-react";
 import React from "react";
 import type { LocalFile } from "../../stores/productionStore";
 import { useProductionStore } from "../../stores/productionStore";
 
 export const FileExplorer: React.FC = () => {
-  // FIX: Removed `playAudio` as it no longer exists in the store.
-  const { localFiles, loadAudioFile } = useProductionStore();
+  const { localFiles, loadAudioFile, loadDirectory, isScanningFiles } =
+    useProductionStore();
 
   const mediaFiles = localFiles;
 
-  // This function now handles both single-click and the play button's click.
-  // It loads the file, and the player's `autoPlay` prop handles playback.
   const handleLoadAndPlay = (file: LocalFile) => {
-    // FIX: Removed the unnecessary `as any` cast for better type safety.
     loadAudioFile({ handle: file.handle });
   };
 
-  // This handler prevents the click on the button from also triggering the click on the parent div.
   const handlePlayButtonClick = (file: LocalFile, event: React.MouseEvent) => {
     event.stopPropagation();
     handleLoadAndPlay(file);
@@ -28,12 +24,22 @@ export const FileExplorer: React.FC = () => {
       style={{ minHeight: "0px" }} // Explicitly set minHeight to ensure proper height calculation
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-600">
+      <div className="p-4 border-b border-gray-600 flex justify-between items-center">
         <p className="text-sm text-gray-400">
           {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""} in
           project folder
         </p>
+        <button
+          onClick={loadDirectory}
+          disabled={isScanningFiles}
+          className="flex items-center space-x-1 text-gray-400 hover:text-white transition disabled:opacity-50"
+          title="Refresh File List"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span className="text-sm">Refresh</span>
+        </button>
       </div>
+
       {/* File List */}
       <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
         {mediaFiles.length === 0 ? (
