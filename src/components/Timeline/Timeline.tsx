@@ -1,7 +1,7 @@
 // src/components/Timeline/Timeline.tsx
 
 import { FolderOpen } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useProductionStore } from "../../stores/productionStore";
 import { MomentCard } from "./MomentCard";
 import { TimeControl } from "./TimeControl";
@@ -15,6 +15,11 @@ export const Timeline: React.FC = () => {
     localFiles,
     isScanningFiles,
   } = useProductionStore();
+
+  // Ref for the timeline container
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
+  // Ref for the currently active moment
+  const activeMomentRef = useRef<HTMLDivElement>(null);
 
   // Update timeline time every second when playing
   useEffect(() => {
@@ -33,6 +38,16 @@ export const Timeline: React.FC = () => {
     };
   }, [timeline.isPlaying, updateTimelineTime]);
 
+  // Scroll the active moment into view when the currentMomentIndex changes
+  useEffect(() => {
+    if (activeMomentRef.current && timelineContainerRef.current) {
+      activeMomentRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [timeline.currentMomentIndex]);
+
   if (!currentProduction) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -49,7 +64,7 @@ export const Timeline: React.FC = () => {
       {/* Time Control */}
       <TimeControl />
 
-      {/* + Local File Loader */}
+      {/* Local File Loader */}
       <div className="p-4 border-b border-gray-700">
         <button
           onClick={loadDirectory}
@@ -67,13 +82,17 @@ export const Timeline: React.FC = () => {
       </div>
 
       {/* Moments List */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        ref={timelineContainerRef} // Attach the container ref
+      >
         {currentProduction.moments.map((moment, index) => (
           <MomentCard
             key={moment.id}
             moment={moment}
             index={index}
             isActive={index === timeline.currentMomentIndex}
+            ref={index === timeline.currentMomentIndex ? activeMomentRef : null} // Attach the active moment ref
           />
         ))}
       </div>
