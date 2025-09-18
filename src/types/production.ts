@@ -35,12 +35,12 @@ export interface Production {
 
 // Timeline and playback state
 export interface TimelineState {
-  isPlaying: boolean;
+  isPlaying: boolean; // Is the moment timer actively ticking?
   isPaused: boolean;
   currentMomentIndex: number;
-  globalTime: number; // total elapsed seconds
+  globalTime: number; // total elapsed seconds since the very beginning
   currentMomentTime: number; // elapsed seconds in current moment
-  startTime?: Date; // when play was pressed
+  globalStartTime?: number; // The timestamp (Date.now()) when the global timer started
 }
 
 // Audio player state

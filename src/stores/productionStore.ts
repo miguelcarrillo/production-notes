@@ -34,6 +34,7 @@ interface ProductionStore {
     searchResults: FreesoundResult[];
     isSearching: boolean;
     playingPreviewId: number | null;
+    nextPageUrl: string | null;
   };
 
   localFiles: LocalFile[];
@@ -78,6 +79,9 @@ interface ProductionStore {
   ) => Promise<MediaFile | null>;
 
   hydrateSoundboard: () => Promise<void>;
+
+  // New action to fetch the next page of search results
+  fetchNextPage: () => Promise<void>;
 }
 
 // --- Audio Engine Setup ---
@@ -112,6 +116,7 @@ export const useProductionStore = create<ProductionStore>()(
           searchResults: [],
           isSearching: false,
           playingPreviewId: null,
+          nextPageUrl: null,
         },
         localFiles: [],
         isScanningFiles: false,
@@ -122,20 +127,37 @@ export const useProductionStore = create<ProductionStore>()(
           set({ currentProduction: production }),
 
         // --- Timeline Actions ---
-        startTimeline: () =>
+        startTimeline: () => {
+          set((state) => {
+            // If the global timer hasn't started yet, start it now.
+            // It will not be reset until stopTimeline is called.
+            const newGlobalStartTime =
+              state.timeline.globalStartTime || Date.now();
+
+            return {
+              timeline: {
+                ...state.timeline,
+                isPlaying: true,
+                isPaused: false,
+                globalStartTime: newGlobalStartTime,
+              },
+            };
+          });
+        },
+
+        pauseTimeline: () => {
+          // Pause only affects the moment timer, not the global one.
           set((state) => ({
             timeline: {
               ...state.timeline,
-              isPlaying: true,
-              isPaused: false,
-              startTime: new Date(),
+              isPlaying: false,
+              isPaused: true,
             },
-          })),
-        pauseTimeline: () =>
-          set((state) => ({
-            timeline: { ...state.timeline, isPlaying: false, isPaused: true },
-          })),
-        stopTimeline: () =>
+          }));
+        },
+
+        stopTimeline: () => {
+          // This is a full reset of everything.
           set({
             timeline: {
               isPlaying: false,
@@ -143,61 +165,105 @@ export const useProductionStore = create<ProductionStore>()(
               currentMomentIndex: 0,
               globalTime: 0,
               currentMomentTime: 0,
+              globalStartTime: undefined, // Clear the global start time
             },
-          }),
-        nextMoment: () =>
+          });
+        },
+
+        nextMoment: () => {
           set((state) => {
             if (!state.currentProduction) return {};
+
+            // Prevent going past the end of the moments list
             const nextIndex = Math.min(
               state.timeline.currentMomentIndex + 1,
               state.currentProduction.moments.length - 1
             );
+
+            // If we are already at the last moment, do nothing.
+            if (nextIndex === state.timeline.currentMomentIndex) {
+              return {};
+            }
+
             return {
               timeline: {
                 ...state.timeline,
                 currentMomentIndex: nextIndex,
-                currentMomentTime: 0,
+                currentMomentTime: 0, // Reset moment timer for the new moment
               },
             };
-          }),
-        previousMoment: () =>
-          set((state) => {
-            const nextIndex = Math.max(
-              state.timeline.currentMomentIndex - 1,
-              0
-            );
-            return {
-              timeline: {
-                ...state.timeline,
-                currentMomentIndex: nextIndex,
-                currentMomentTime: 0,
-              },
-            };
-          }),
-        goToMoment: (momentIndex) =>
+          });
+        },
+
+        // This action is largely the same as nextMoment, but for clarity
+        goToMoment: (momentIndex) => {
           set((state) => ({
             timeline: {
               ...state.timeline,
               currentMomentIndex: momentIndex,
-              currentMomentTime: 0,
+              currentMomentTime: 0, // Always reset moment timer on a manual jump
             },
-          })),
-        updateTimelineTime: () =>
+          }));
+        },
+
+        // This is the core "heartbeat" of the timer system
+        updateTimelineTime: () => {
+          const { currentProduction } = get();
+          if (!currentProduction) return;
+
           set((state) => {
-            if (!state.timeline.isPlaying || !state.timeline.startTime)
-              return {};
-            const now = new Date();
-            const totalElapsed = Math.floor(
-              (now.getTime() - state.timeline.startTime.getTime()) / 1000
-            );
+            const { timeline } = state;
+            let {
+              globalTime,
+              currentMomentTime,
+              currentMomentIndex,
+              isPlaying,
+            } = timeline;
+
+            // 1. Update Global Timer (always runs if started)
+            if (timeline.globalStartTime) {
+              globalTime = Math.floor(
+                (Date.now() - timeline.globalStartTime) / 1000
+              );
+            }
+
+            // 2. Update Moment Timer (only if playing)
+            if (isPlaying) {
+              currentMomentTime += 1;
+
+              const currentMoment =
+                currentProduction.moments[currentMomentIndex];
+              const momentDuration = currentMoment?.durationSeconds || 0;
+
+              // 3. Check for Auto-Advance to next moment
+              if (momentDuration > 0 && currentMomentTime >= momentDuration) {
+                const isLastMoment =
+                  currentMomentIndex >= currentProduction.moments.length - 1;
+
+                if (isLastMoment) {
+                  // If it's the last moment, just pause the timer at the end.
+                  isPlaying = false;
+                  currentMomentTime = momentDuration; // Clamp to the duration
+                } else {
+                  // Advance to the next moment
+                  currentMomentIndex += 1;
+                  currentMomentTime = 0; // Reset for the new moment
+                }
+              }
+            }
+
+            // Return the updated state
             return {
               timeline: {
-                ...state.timeline,
-                globalTime: totalElapsed,
-                currentMomentTime: totalElapsed,
+                ...timeline,
+                globalTime,
+                currentMomentTime,
+                currentMomentIndex,
+                isPlaying,
               },
             };
-          }),
+          });
+        },
 
         // --- Audio Player Actions ---
         loadAudioFile: async (file) => {
@@ -282,6 +348,7 @@ export const useProductionStore = create<ProductionStore>()(
                 ...state.soundboard,
                 searchResults: mappedResults,
                 isSearching: false,
+                nextPageUrl: data.next,
               },
             }));
           } catch (error) {
@@ -299,6 +366,59 @@ export const useProductionStore = create<ProductionStore>()(
           set((state) => ({
             soundboard: { ...state.soundboard, searchResults: [] },
           })),
+
+        fetchNextPage: async () => {
+          const { nextPageUrl } = get().soundboard;
+          if (!nextPageUrl) return;
+
+          const apiKey = import.meta.env.VITE_FREESOUND_API_KEY;
+          if (!apiKey) {
+            console.error("Freesound API key missing for next page fetch.");
+            return;
+          }
+
+          set((state) => ({
+            soundboard: { ...state.soundboard, isSearching: true },
+          }));
+
+          const urlWithToken = `${nextPageUrl}&token=${apiKey}`;
+
+          try {
+            const response = await fetch(urlWithToken);
+            if (!response.ok)
+              throw new Error(`API request failed: ${response.statusText}`);
+            const data = await response.json();
+
+            const newResults: FreesoundResult[] = data.results
+              .map((sound: any) => ({
+                id: sound.id,
+                name: sound.name,
+                previews: sound.previews,
+                duration: sound.duration,
+                username: sound.username,
+              }))
+              .filter(
+                (sound: FreesoundResult) =>
+                  sound.previews && sound.previews["preview-hq-mp3"]
+              );
+
+            set((state) => ({
+              soundboard: {
+                ...state.soundboard,
+                // FIX: Replace the searchResults array instead of appending to it.
+                searchResults: newResults,
+                isSearching: false,
+                nextPageUrl: data.next,
+              },
+            }));
+          } catch (error) {
+            console.error("Error fetching next page:", error);
+            set((state) => ({
+              soundboard: { ...state.soundboard, isSearching: false },
+            }));
+          }
+        },
+
         addSoundToBoard: (sound) =>
           set((state) => {
             const newSoundEffect: SoundEffect = {

@@ -1,4 +1,4 @@
-import { Play, Plus, Search, Square, X } from "lucide-react";
+import { ChevronRight, Play, Plus, Search, Square, X } from "lucide-react";
 import React, { useState } from "react";
 import { useProductionStore } from "../../stores/productionStore";
 
@@ -14,6 +14,7 @@ export const Soundboard: React.FC = () => {
     clearSearchResults,
     playPreviewSound,
     stopPreviewSound,
+    fetchNextPage,
   } = useProductionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,7 +79,21 @@ export const Soundboard: React.FC = () => {
             >
               <X className="w-5 h-5" />
             </button>
-            <h5 className="font-medium text-gray-300 mb-3">Search Results</h5>
+            <div className="flex items-center justify-between mb-3">
+              <h5 className="font-medium text-gray-300">Search Results</h5>
+              {/* + Conditionally render the "Next Page" button */}
+              {soundboard.nextPageUrl && (
+                <button
+                  onClick={fetchNextPage}
+                  disabled={soundboard.isSearching}
+                  className="flex items-center mr-4 space-x-1 text-sm text-primary-400 hover:text-primary-300 disabled:opacity-50"
+                  title="Load more results"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             {/* + Adjust layout to two columns */}
             <div className="grid grid-cols-2 gap-3">
               {soundboard.searchResults.map((result) => {
