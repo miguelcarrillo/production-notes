@@ -1,20 +1,13 @@
 // src/components/Timeline/Timeline.tsx
 
-import { FolderOpen } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useProductionStore } from "../../stores/productionStore";
 import { MomentCard } from "./MomentCard";
 import { TimeControl } from "./TimeControl";
 
 export const Timeline: React.FC = () => {
-  const {
-    currentProduction,
-    timeline,
-    updateTimelineTime,
-    loadDirectory,
-    localFiles,
-    isScanningFiles,
-  } = useProductionStore();
+  const { currentProduction, timeline, updateTimelineTime } =
+    useProductionStore();
 
   // Ref for the timeline container
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -64,22 +57,7 @@ export const Timeline: React.FC = () => {
       {/* Time Control */}
       <TimeControl />
 
-      {/* Local File Loader */}
-      <div className="p-4 border-b border-gray-700">
-        <button
-          onClick={loadDirectory}
-          disabled={isScanningFiles}
-          className="w-full flex items-center justify-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50"
-        >
-          <FolderOpen className="w-5 h-5" />
-          <span>{isScanningFiles ? "Scanning..." : "Load Audio Folder"}</span>
-        </button>
-        {localFiles.length > 0 && (
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Loaded {localFiles.length} audio files.
-          </p>
-        )}
-      </div>
+      {/* Local File Loader moved to Details component */}
 
       {/* Moments List */}
       <div
