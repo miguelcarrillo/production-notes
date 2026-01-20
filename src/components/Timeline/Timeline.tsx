@@ -16,18 +16,19 @@ export const Timeline: React.FC = () => {
 
   // Update timeline time every second when playing
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout | undefined;
 
-    if (timeline.isPlaying) {
+    // We always want the global timer to keep running once started (globalStartTime set).
+    // The moment timer (currentMomentTime) will only advance while `timeline.isPlaying` is true
+    // because updateTimelineTime checks `isPlaying` before incrementing it.
+    if (timeline.globalStartTime) {
       interval = setInterval(() => {
         updateTimelineTime();
       }, 1000);
     }
 
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      if (interval) clearInterval(interval);
     };
   }, [timeline.isPlaying, updateTimelineTime]);
 

@@ -1,4 +1,4 @@
-import { Pause, Play, SkipForward, Square } from "lucide-react";
+import { Pause, Play, SkipForward, SkipBack } from "lucide-react";
 import React from "react";
 import { useProductionStore } from "../../stores/productionStore";
 import { formatDuration } from "../../utils/mockData";
@@ -26,39 +26,7 @@ export const TimeControl: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-800 border-b border-gray-700">
-      {/* Control Buttons */}
-      <div className="flex items-center justify-center space-x-3 mb-4">
-        <button
-          onClick={handlePlayPause}
-          className="flex items-center justify-center w-12 h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-full transition-colors"
-        >
-          {timeline.isPlaying ? (
-            <Pause className="w-6 h-6" />
-          ) : (
-            <Play className="w-6 h-6 ml-1" />
-          )}
-        </button>
-
-        <button
-          onClick={stopTimeline}
-          className="flex items-center justify-center w-10 h-10 bg-gray-600 hover:bg-gray-700 text-white rounded-full transition-colors"
-        >
-          <Square className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={nextMoment}
-          className="flex items-center justify-center w-10 h-10 bg-gray-600 hover:bg-gray-700 text-white rounded-full transition-colors"
-          disabled={
-            !currentProduction ||
-            timeline.currentMomentIndex >= currentProduction.moments.length - 1
-          }
-        >
-          <SkipForward className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Time Displays */}
+            {/* Time Displays */}
       <div className="grid grid-cols-2 gap-4 text-center">
         {/* Global Time */}
         <div className="bg-gray-700 rounded-lg p-3">
@@ -83,8 +51,40 @@ export const TimeControl: React.FC = () => {
         </div>
       </div>
 
+      {/* Control Buttons */}
+      <div className="flex items-center justify-center space-x-3 mt-4">
+        <button
+          onClick={handlePlayPause}
+          className="flex items-center justify-center w-12 h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-full transition-colors"
+        >
+          {timeline.isPlaying ? (
+            <Pause className="w-6 h-6" />
+          ) : (
+            <Play className="w-6 h-6 ml-1" />
+          )}
+        </button>
+
+        <button
+          onClick={() => useProductionStore.getState().previousMoment?.()}
+          className="flex items-center justify-center w-10 h-10 bg-gray-600 hover:bg-gray-700 text-white rounded-full transition-colors"
+        >
+          <SkipBack className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={nextMoment}
+          className="flex items-center justify-center w-10 h-10 bg-gray-600 hover:bg-gray-700 text-white rounded-full transition-colors"
+          disabled={
+            !currentProduction ||
+            timeline.currentMomentIndex >= currentProduction.moments.length - 1
+          }
+        >
+          <SkipForward className="w-5 h-5" />
+        </button>
+      </div>
+
       {/* Status Indicator */}
-      <div className="mt-4 text-center">
+      <div className="flex items-center justify-between mt-4 text-center">
         <div className="flex items-center justify-center space-x-2">
           <div
             className={`w-2 h-2 rounded-full ${
@@ -102,6 +102,15 @@ export const TimeControl: React.FC = () => {
               ? "Paused"
               : "Stopped"}
           </span>
+        </div>
+        {/* Reset link (discrete) */}
+        <div className="mt-0">
+          <button
+            onClick={stopTimeline}
+            className="text-xs text-gray-400 hover:underline"
+          >
+            Reset
+          </button>
         </div>
       </div>
     </div>

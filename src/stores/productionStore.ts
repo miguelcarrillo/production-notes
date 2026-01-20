@@ -134,6 +134,15 @@ export const useProductionStore = create<ProductionStore>()(
             const newGlobalStartTime =
               state.timeline.globalStartTime || Date.now();
 
+            try {
+              // eslint-disable-next-line no-console
+              console.debug(
+                `[startTimeline] time=${new Date().toISOString()} globalStartTime=${newGlobalStartTime}`
+              );
+            } catch (e) {
+              /* ignore */
+            }
+
             return {
               timeline: {
                 ...state.timeline,
@@ -147,6 +156,13 @@ export const useProductionStore = create<ProductionStore>()(
 
         pauseTimeline: () => {
           // Pause only affects the moment timer, not the global one.
+          try {
+            // eslint-disable-next-line no-console
+            console.debug(`[pauseTimeline] time=${new Date().toISOString()}`);
+          } catch (e) {
+            /* ignore */
+          }
+
           set((state) => ({
             timeline: {
               ...state.timeline,
@@ -286,7 +302,8 @@ export const useProductionStore = create<ProductionStore>()(
                     handle: file.handle,
                     src: currentObjectUrl,
                   } as MediaFile,
-                  isPlaying: true,
+                  // Do not auto-play on load; the player manages play locally
+                  isPlaying: false,
                   pausedByUser: false,
                 },
               });
@@ -295,8 +312,20 @@ export const useProductionStore = create<ProductionStore>()(
             console.error("Error loading audio file:", error);
           }
         },
-        setAudioPlayingState: (isPlaying, userInitiated) =>
-          set((state) => ({
+        setAudioPlayingState: (isPlaying, userInitiated) => {
+          // Debug: log callers of this action to trace unexpected invocations
+          try {
+            // eslint-disable-next-line no-console
+            console.debug(
+              `[setAudioPlayingState] isPlaying=${isPlaying} userInitiated=${userInitiated} time=${new Date().toISOString()}`
+            );
+            // eslint-disable-next-line no-console
+            console.debug(new Error("setAudioPlayingState stack").stack);
+          } catch (e) {
+            /* ignore logging errors */
+          }
+
+          return set((state) => ({
             audioPlayer: {
               ...state.audioPlayer,
               isPlaying: isPlaying,
@@ -304,7 +333,8 @@ export const useProductionStore = create<ProductionStore>()(
                 ? !isPlaying
                 : state.audioPlayer.pausedByUser,
             },
-          })),
+          }));
+        },
 
         // --- Soundboard Actions ---
         searchSounds: async (query) => {

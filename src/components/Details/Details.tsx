@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { FolderOpen, Play } from "lucide-react";
 import AudioPlayer, {
   type InterfaceGridTemplateArea,
@@ -29,8 +29,28 @@ const customInterfacePlacement: InterfaceGridTemplateArea = {
 };
 
 export const AudioPlayerComponent: React.FC = () => {
-  const { audioPlayer, loadAudioFile, localFiles, setAudioPlayingState } =
-    useProductionStore();
+  // Select only the pieces of store state we need to avoid re-rendering the
+  // player when `audioPlayer.isPlaying` changes elsewhere (this was causing
+  // the player to remount/rewind and emit onPause immediately).
+  const currentFile = useProductionStore((s) => s.audioPlayer.currentFile);
+  const loadAudioFile = useProductionStore((s) => s.loadAudioFile);
+  const localFiles = useProductionStore((s) => s.localFiles);
+  // Audio player now manages its own playback state locally; we do not
+  // update the global store on play/pause to avoid coupling/toggling.
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.debug(`[AudioPlayerComponent] mount currentFile=${currentFile?.id}`);
+    } catch (e) {}
+
+    return () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[AudioPlayerComponent] unmount");
+      } catch (e) {}
+    };
+  }, []);
 
   const handleDrop = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -47,7 +67,27 @@ export const AudioPlayerComponent: React.FC = () => {
     e.preventDefault();
   };
 
-  if (!audioPlayer.currentFile || !audioPlayer.currentFile.src) {
+  // Memoize playlist and initial state even when there's no file so hooks
+  // order remains stable between renders (avoids Rules of Hooks errors).
+  const memoPlayList = React.useMemo<PlayList>(() => {
+    if (!currentFile) return [];
+    return [
+      {
+        name: currentFile.name,
+        writer: currentFile.path.split("/").pop()?.split(".")[0] || "Unknown",
+        img: "/vinyl-record.png",
+        src: currentFile.src!,
+        id: stringToHash(currentFile.id),
+      },
+    ];
+  }, [currentFile?.id, currentFile?.src]);
+
+  const memoAudioInitialState = React.useMemo(
+    () => ({ isPlaying: false, curPlayId: currentFile ? stringToHash(currentFile.id) : 0 }),
+    [currentFile?.id]
+  );
+
+  if (!currentFile || !currentFile.src) {
     return (
       <div
         className="h-full flex flex-col justify-center p-4"
@@ -63,18 +103,7 @@ export const AudioPlayerComponent: React.FC = () => {
     );
   }
 
-  const playListForPlayer: PlayList = [
-    {
-      name: audioPlayer.currentFile.name,
-      writer:
-        audioPlayer.currentFile.path.split("/").pop()?.split(".")[0] ||
-        "Unknown",
-      img: "/vinyl-record.png",
-      src: audioPlayer.currentFile.src,
-      id: stringToHash(audioPlayer.currentFile.id),
-    },
-  ];
-
+  // playList and initial state are handled by memoPlayList / memoAudioInitialState
   return (
     <div
       className="h-full flex flex-col justify-center p-4"
@@ -82,15 +111,10 @@ export const AudioPlayerComponent: React.FC = () => {
       onDragOver={handleDragOver}
     >
       <AudioPlayer
-        key={audioPlayer.currentFile.id}
-        playList={playListForPlayer}
+        key={currentFile.id}
+        playList={memoPlayList}
         // Prevent automatic playback when a file is loaded - user must initiate play
-        audioInitialState={{
-          isPlaying: false,
-          curPlayId: stringToHash(audioPlayer.currentFile.id),
-          onPlay: () => setAudioPlayingState(true, true),
-          onPause: () => setAudioPlayingState(false, true),
-        }}
+        audioInitialState={memoAudioInitialState}
         activeUI={{
           all: true,
           progress: "waveform",
@@ -114,7 +138,7 @@ export const AudioPlayerComponent: React.FC = () => {
 };
 
 export const Details: React.FC = () => {
-  const { loadDirectory, localFiles, isScanningFiles } = useProductionStore();
+  const { loadDirectory, isScanningFiles } = useProductionStore();
 
   return (
     <div className="h-full flex flex-col">

@@ -21,46 +21,41 @@ export const MomentCard = React.forwardRef<HTMLDivElement, MomentCardProps>(
 
     return (
       <div
-        ref={ref} // Forward the ref here
-        className={`p-4 border-b border-gray-700 cursor-pointer transition-colors ${
+        ref={ref}
+        className={`p-4 border-b cursor-pointer transition-colors flex flex-col ${
           isActive
-            ? "bg-primary-900 border-primary-600"
-            : "bg-gray-900 hover:bg-gray-800"
+            ? "bg-gradient-to-r from-primary-700 to-primary-600 text-white"
+            : "bg-gray-900 text-gray-400 opacity-70 hover:opacity-100"
         }`}
         onClick={handleClick}
       >
-        {/* Moment Header */}
+        {/* Header: number + title aligned */}
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             <span
-              className={`text-sm font-medium px-2 py-1 rounded ${
-                isActive
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-700 text-gray-300"
+              className={`flex items-center justify-center w-8 h-8 text-sm font-semibold rounded ${
+                isActive ? "bg-white/10 text-white" : "bg-gray-800 text-gray-300"
               }`}
             >
               {index + 1}
             </span>
+            <h3 className={`font-semibold text-left ${isActive ? "text-white" : "text-gray-200"}`}>
+              {moment.title}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-3">
             {moment.duration && (
               <div className="flex items-center text-xs text-gray-400">
                 <Clock className="w-3 h-3 mr-1" />
                 {moment.duration}
               </div>
             )}
+            {moment.importantNote && (
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+            )}
           </div>
-          {moment.importantNote && (
-            <AlertTriangle className="w-4 h-4 text-yellow-500" />
-          )}
         </div>
-
-        {/* Moment Title */}
-        <h3
-          className={`font-semibold mb-2 ${
-            isActive ? "text-white" : "text-gray-200"
-          }`}
-        >
-          {moment.title}
-        </h3>
 
         {/* Important Note */}
         {moment.importantNote && (
@@ -74,9 +69,8 @@ export const MomentCard = React.forwardRef<HTMLDivElement, MomentCardProps>(
 
         {/* Media Count */}
         {moment.media.length > 0 && (
-          <div className="text-xs text-gray-400">
-            {moment.media.length} media file
-            {moment.media.length !== 1 ? "s" : ""}
+          <div className="text-xs text-gray-400 mt-auto">
+            {moment.media.length} media file{moment.media.length !== 1 ? "s" : ""}
           </div>
         )}
       </div>

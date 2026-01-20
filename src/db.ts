@@ -14,12 +14,19 @@ export interface StoredHandle {
 export class MySubClassedDexie extends Dexie {
   soundboard!: Table<SoundboardState>;
   fileSystemHandles!: Table<StoredHandle>;
+  slides!: Table<{
+    id: string;
+    slides: Array<{ id: string; title: string }>;
+  }>;
 
   constructor() {
     super("productionNotesDB");
-    this.version(1).stores({
+    // Add a new 'slides' store to persist presentation slides.
+    // Bump DB version so Dexie can create the new store if it doesn't exist.
+    this.version(2).stores({
       soundboard: "id", // Primary key
       fileSystemHandles: "id",
+      slides: "id",
     });
   }
 }

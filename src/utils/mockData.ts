@@ -51,27 +51,26 @@ const mockMediaFiles: MediaFile[] = [
 const mockMoments: Moment[] = [
   {
     id: "moment-1",
-    title: "Improvisadores entran",
-    notes: "música de Hollywood.",
-    importantNote: "música de Hollywood.",
-    media: [], // ambient-forest.mp3
+    title: "Tráiler 1 - Blockbuster (3’)",
+    notes: "",
+    media: [],
     order: 1,
     createdAt: new Date("2024-01-15"),
     updatedAt: new Date("2024-01-15"),
   },
   {
     id: "moment-2",
-    title: "Intro con el público",
+    title: "Tráiler 2 - Misterio (3’)",
     notes: `Cada uno escoje un título sugerido por el público. Tono de “queremos ver todas estas películas!”. Cada uno presenta el título que eligió y por qué quiere ver la película.`,
     importantNote: ``,
-    media: [], // dramatic-music.mp3
+    media: [], 
     order: 2,
     createdAt: new Date("2024-01-15"),
     updatedAt: new Date("2024-01-16"),
   },
   {
     id: "moment-3",
-    title: "Trailer 1: Misterio",
+    title: "Tráiler 3 - Auge y Caída (3’)",
     notes: ``,
     importantNote: ``,
     media: [], // crowd-applause.mp3
@@ -81,7 +80,7 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-4",
-    title: "Trailer 2: Poema",
+    title: "Tráiler 4 - Comedia (3')",
     notes: ``,
     importantNote: ``,
     media: [], // rain-storm.mp3
@@ -91,7 +90,7 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-5",
-    title: "Trailer 3: Comedia",
+    title: "Intro con el público (2’)",
     notes: ``,
     importantNote: ``,
     media: [], // bell-chime.mp3
@@ -101,7 +100,7 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-6",
-    title: "Trailer 4: Historia de vida",
+    title: "Peli completa (15’)",
     notes: ``,
     importantNote: ``,
     media: [], // ambient-forest.mp3
@@ -111,7 +110,7 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-7",
-    title: "Trailer 5: Ensamble",
+    title: "Entrevista con los actores (3’)",
     notes: ``,
     importantNote: ``,
     media: [], // dramatic-music.mp3
@@ -121,9 +120,9 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-8",
-    title: "Público escoge historia",
-    notes: "Se pregunta cuál película quieren ver.",
-    importantNote: "Se pregunta cuál película quieren ver.",
+    title: "Tráiler Adicional 1 (3’)",
+    notes: "",
+    importantNote: "",
     media: [], // crowd-applause.mp3
     order: 8,
     createdAt: new Date("2024-01-17"),
@@ -131,14 +130,44 @@ const mockMoments: Moment[] = [
   },
   {
     id: "moment-9",
-    title: "Película entera.",
-    notes: "Ver apéndice 4 para la estructura de la historia.",
-    importantNote: "Ver apéndice 4 para la estructura de la historia.",
+    title: "Vuelta a la entrevista (2’)",
+    notes: "",
+    importantNote: "",
     media: [], // rain-storm.mp3
     order: 9,
     createdAt: new Date("2024-01-17"),
     updatedAt: new Date("2024-01-17"),
   },
+  {
+    id: "moment-10",
+    title: "Tráiler adicional 2 (3')",
+    notes: "",
+    importantNote: "",
+    media: [], // rain-storm.mp3
+    order: 10,
+    createdAt: new Date("2024-01-17"),
+    updatedAt: new Date("2024-01-17"),
+  },
+    {
+    id: "moment-11",
+    title: "Escena Final (2')",
+    notes: "",
+    importantNote: "",
+    media: [], // rain-storm.mp3
+    order: 10,
+    createdAt: new Date("2024-01-17"),
+    updatedAt: new Date("2024-01-17"),
+  },  
+  {
+    id: "moment-12",
+    title: "Créditos",
+    notes: "",
+    importantNote: "",
+    media: [], // rain-storm.mp3
+    order: 10,
+    createdAt: new Date("2024-01-17"),
+    updatedAt: new Date("2024-01-17"),
+  },   
 ];
 
 export const mockProduction: Production = {

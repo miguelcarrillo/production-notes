@@ -28,8 +28,11 @@ const customInterfacePlacement: InterfaceGridTemplateArea = {
 };
 
 export const AudioPlayerComponent: React.FC = () => {
-  const { audioPlayer, loadAudioFile, localFiles, setAudioPlayingState } =
-    useProductionStore();
+  // Select specific slices to avoid re-rendering this component when unrelated
+  // parts of the store (like timeline) change.
+  const audioPlayer = useProductionStore((s) => s.audioPlayer);
+  const loadAudioFile = useProductionStore((s) => s.loadAudioFile);
+  const localFiles = useProductionStore((s) => s.localFiles);
 
   const handleDrop = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -61,18 +64,25 @@ export const AudioPlayerComponent: React.FC = () => {
       </div>
     );
   }
+  const memoPlayList = React.useMemo<PlayList>(() => {
+    if (!audioPlayer.currentFile) return [];
+    return [
+      {
+        name: audioPlayer.currentFile.name,
+        writer:
+          audioPlayer.currentFile.path.split("/").pop()?.split(".")[0] ||
+          "Unknown",
+        img: "/vinyl-record.png",
+        src: audioPlayer.currentFile.src!,
+        id: stringToHash(audioPlayer.currentFile.id),
+      },
+    ];
+  }, [audioPlayer.currentFile?.id, audioPlayer.currentFile?.src]);
 
-  const playListForPlayer: PlayList = [
-    {
-      name: audioPlayer.currentFile.name,
-      writer:
-        audioPlayer.currentFile.path.split("/").pop()?.split(".")[0] ||
-        "Unknown",
-      img: "/vinyl-record.png",
-      src: audioPlayer.currentFile.src,
-      id: stringToHash(audioPlayer.currentFile.id),
-    },
-  ];
+  const memoAudioInitialState = React.useMemo(
+    () => ({ isPlaying: false, curPlayId: audioPlayer.currentFile ? stringToHash(audioPlayer.currentFile.id) : 0 }),
+    [audioPlayer.currentFile?.id]
+  );
 
   return (
     <div
@@ -82,15 +92,11 @@ export const AudioPlayerComponent: React.FC = () => {
     >
       <AudioPlayer
         key={audioPlayer.currentFile.id}
-        playList={playListForPlayer}
-        // FIX: Moved onPlay and onPause inside this object
-        audioInitialState={{
-          isPlaying: audioPlayer.isPlaying,
-          curPlayId: stringToHash(audioPlayer.currentFile.id),
-          // Event handlers for the underlying <audio> element go here
-          onPlay: () => setAudioPlayingState(true, true),
-          onPause: () => setAudioPlayingState(false, true),
-        }}
+        playList={memoPlayList}
+        // Keep playback local to the AudioPlayer instance; do not write
+        // play/pause events to the global store which can cause unrelated
+        // components to re-render and the audio element to be recreated.
+        audioInitialState={memoAudioInitialState}
         activeUI={{
           all: true,
           progress: "waveform",

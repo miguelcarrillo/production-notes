@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Presenter</title>
+  <!-- Google Font: Alfa Slab One -->
+   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <style>
+    html,body{height:100%;margin:0;background:#000;color:#fff;font-family:'Cinzel',Cabin,Georgia,serif}
+    .frame{position:relative;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  /* fadeable layers */
+  .layer{transition:opacity var(--fade-duration,300ms) ease;opacity:1}
+  .layer.hidden{opacity:0;pointer-events:none}
+  .overlay{position:relative;z-index:2;text-align:center;padding:2rem;max-width:90%}
+  h1{margin:0;word-wrap:break-word;line-height:1.25;font-weight:700;font-size:15vh;letter-spacing:0.06em}
+    .black{background:#000}
+    /* controls hidden by default, appear when hovering the frame */
+    .controls{position:absolute;top:10px;right:10px;z-index:4;opacity:0;transition:opacity .18s ease}
+    .frame:hover .controls, .controls:hover{opacity:1}
+    button{padding:.5rem 1rem}
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <video id="bg" class="layer video-layer" loop muted playsinline autoplay src="/colorful light rays.mp4"></video>
+    <div class="overlay layer">
+      <h1 id="title">Waiting for slide…</h1>
+    </div>
+    <div class="controls" aria-hidden="false">
+      <button id="fs" aria-label="Fullscreen" title="Fullscreen" style="background:transparent;border:none;padding:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);">
+        <!-- simple fullscreen icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M4 4H10V6H6V10H4V4Z" fill="currentColor"/>
+          <path d="M20 4H14V6H18V10H20V4Z" fill="currentColor"/>
+          <path d="M4 20H10V18H6V14H4V20Z" fill="currentColor"/>
+          <path d="M20 20H14V18H18V14H20V20Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const channel = new BroadcastChannel('production-notes-presentation');
+    const titleEl = document.getElementById('title');
+    const overlayEl = document.querySelector('.overlay');
+    const video = document.getElementById('bg');
+    const DEFAULT_VIDEO = '/colorful light rays.mp4';
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let animTimer = null;
+
+    function setFadeMs(ms){
+      document.documentElement.style.setProperty('--fade-duration', (ms || 0) + 'ms');
+    }
+
+    function clearAnim(){ if(animTimer){ clearTimeout(animTimer); animTimer = null; } }
+
+    function showSlideAnimated(slide, fadeMs=300){
+      if(prefersReduced) fadeMs = 0;
+      setFadeMs(fadeMs);
+      clearAnim();
+      document.body.classList.remove('black');
+      if (overlayEl) overlayEl.classList.remove('hidden');
+      if (video) video.classList.remove('hidden');
+      titleEl.textContent = slide?.title ?? '';
+      try{ video.style.display = 'block'; } catch(e){}
+      if (video && (video.getAttribute('src') !== DEFAULT_VIDEO)) {
+        video.setAttribute('src', DEFAULT_VIDEO);
+      }
+      video.play().catch(()=>{});
+      if(fadeMs > 0){
+        animTimer = setTimeout(()=>{ animTimer = null; }, fadeMs + 50);
+      }
+    }
+
+    function blackoutAnimated(fadeMs=300){
+      if(prefersReduced) fadeMs = 0;
+      setFadeMs(fadeMs);
+      clearAnim();
+      // fade out layers
+      if (overlayEl) overlayEl.classList.add('hidden');
+      if (video) video.classList.add('hidden');
+      // after transition, truly hide video element and set background
+      animTimer = setTimeout(()=>{
+        try{ video.style.display = 'none'; } catch(e){}
+        document.body.style.background = '#000';
+        document.body.classList.add('black');
+        animTimer = null;
+      }, (fadeMs||0) + 60);
+    }
+
+    // announce ready to the main app so it can show a connected indicator
+    try {
+      channel.postMessage({ type: 'presenter-ready' });
+    } catch (e) {
+      // ignore
+    }
+
+    channel.onmessage = (ev) => {
+      const msg = ev.data;
+      if (!msg) return;
+      const fade = typeof msg.fadeMs === 'number' ? msg.fadeMs : 300;
+      if (msg.type === 'slide') {
+        showSlideAnimated(msg.slide, fade);
+      } else if (msg.type === 'blackout') {
+        // clear title and animate blackout
+        titleEl.textContent = '';
+        blackoutAnimated(fade);
+      } else if (msg.type === 'video') {
+        // switch video source smoothly
+        if (msg.src) {
+          if (video) {
+            // set src then show
+            try{ video.style.display = 'block'; } catch(e){}
+            video.setAttribute('src', msg.src);
+            video.classList.remove('hidden');
+            overlayEl && overlayEl.classList.remove('hidden');
+            video.play().catch(()=>{});
+          }
+        }
+      }
+    };
+
+    // inform the app when presenter is going away
+    window.addEventListener('beforeunload', () => {
+      try { channel.postMessage({ type: 'presenter-disconnect' }); } catch(e){}
+    });
+
+    document.getElementById('fs').addEventListener('click', () => {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    });
+  </script>
+</body>
+</html>
