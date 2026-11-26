@@ -1,4 +1,4 @@
-import type { Moment, Production } from "../types/production";
+import type { Moment, Production, SoundEffect } from "../types/production";
 
 const mockMoments: Moment[] = [
   {
@@ -135,47 +135,75 @@ export const mockProduction: Production = {
   ),
 };
 
-export const mockSoundEffects = [
+/**
+ * Default soundboard: CC0 sounds from Freesound (found through Openverse),
+ * streamed from Freesound's CDN so the demo works without local files.
+ */
+export const mockSoundEffects: SoundEffect[] = [
   {
     id: "sfx-1",
     name: "Sword Clang",
-    url: "/audio/sfx/sword-clang.mp3",
+    url: "https://cdn.freesound.org/previews/439/439508_3928631-hq.mp3",
     isPlaying: false,
     volume: 0.8,
+    creator: "ethanchase7744",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/ethanchase7744/sounds/439508",
   },
   {
     id: "sfx-2",
     name: "Door Creak",
-    url: "/audio/sfx/door-creak.mp3",
+    url: "https://cdn.freesound.org/previews/219/219492_4056007-hq.mp3",
     isPlaying: false,
     volume: 0.6,
+    creator: "JarredGibb",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/JarredGibb/sounds/219492",
   },
   {
     id: "sfx-3",
     name: "Horse Gallop",
-    url: "/audio/sfx/horse-gallop.mp3",
+    url: "https://cdn.freesound.org/previews/197/197212_3001728-hq.mp3",
     isPlaying: false,
     volume: 0.7,
+    creator: "HebronTheatre",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/HebronTheatre/sounds/197212",
   },
   {
     id: "sfx-4",
     name: "Magic Sparkle",
-    url: "/audio/sfx/magic-sparkle.mp3",
+    url: "https://cdn.freesound.org/previews/351/351408_4067257-hq.mp3",
     isPlaying: false,
     volume: 0.5,
+    creator: "newagesoup",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/newagesoup/sounds/351408",
   },
   {
     id: "sfx-5",
     name: "Crowd Gasp",
-    url: "/audio/sfx/crowd-gasp.mp3",
+    url: "https://cdn.freesound.org/previews/207/207779_2046066-hq.mp3",
     isPlaying: false,
     volume: 0.9,
+    creator: "Dvideoguy",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/Dvideoguy/sounds/207779",
   },
   {
     id: "sfx-6",
     name: "Wind Howl",
-    url: "/audio/sfx/wind-howl.mp3",
+    url: "https://cdn.freesound.org/previews/331/331527_2417207-hq.mp3",
     isPlaying: false,
     volume: 0.6,
+    creator: "DAVESTALKER",
+    license: "CC0",
+    licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/people/DAVESTALKER/sounds/331527",
   },
 ];
