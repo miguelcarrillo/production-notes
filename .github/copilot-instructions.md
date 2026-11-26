@@ -13,7 +13,7 @@ Focus: small React + TypeScript frontend built with Vite. Primary concerns are s
 - Key project patterns & conventions (use these exactly)
   - Persisted soundboard saved under Dexie table `soundboard` with fixed id `0` (see `hydrateSoundboard` & subscription at bottom of `productionStore.ts`).
   - Directory handles are stored in Dexie `fileSystemHandles` under id `'directory'`. When rehydrating, code checks `queryPermission` and clears the DB entry if permission is not granted (`rehydrateDirectoryHandle`).
-  - File scanning is recursive via `scanDirectory(handle, path, files)` and filters on `.mp3`/`.wav` in the store implementation.
+  - File scanning is recursive via `scanDirectory(handle, path, files)` and filters with `isAudioFileName` (`.mp3`, `.wav`, `.ogg`, `.m4a`, case-insensitive).
   - When loading local audio into the main player, the code creates an object URL and revokes old ones (`currentObjectUrl` pattern). Follow this pattern to avoid leaking URLs.
   - Preview playback uses a single `previewHowl` and a sound cache `Map<string, Howl>` for soundboard items (see `soundCache` and `previewHowl` in `productionStore.ts`).
 
@@ -26,7 +26,7 @@ Focus: small React + TypeScript frontend built with Vite. Primary concerns are s
 - Environment / integration points
   - Freesound integration: `src/stores/productionStore.ts` calls Freesound API; it requires `VITE_FREESOUND_API_KEY` in the environment (Vite will expose it to the client if prefixed with `VITE_`).
   - IndexedDB database name: `productionNotesDB` (see `src/db.ts`). Use browser devtools > Application > IndexedDB to inspect during debugging.
-  - File System Access API is required for the directory picker (Chromium-based browsers only).
+  - The directory picker uses the File System Access API where available (Chromium, secure context) and falls back to a hidden `<input webkitdirectory>` elsewhere; see `src/utils/localFiles.ts` and `LoadFolderButton.tsx`. Only the API path remembers the folder between sessions.
 
 - How to make safe changes
   - To add UI features, prefer adding actions to `productionStore.ts`. Keep logic for side-effects (file access, Dexie calls, fetch) inside the store to preserve single source of truth.
