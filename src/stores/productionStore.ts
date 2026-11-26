@@ -10,6 +10,13 @@ import type {
   SoundEffect,
   TimelineState,
 } from "../types/production";
+import {
+  isAudioFileName,
+  isDirectoryPickerSupported,
+  localFilesFromFileList,
+  readLocalFile,
+  type LocalFile,
+} from "../utils/localFiles";
 import { mockProduction, mockSoundEffects } from "../utils/mockData";
 
 // Shape of a sound as returned by the Freesound search API.
@@ -18,11 +25,7 @@ type FreesoundApiSound = Pick<
   "id" | "name" | "previews" | "duration" | "username"
 >;
 
-export interface LocalFile {
-  handle: FileSystemFileHandle;
-  name: string;
-  path: string;
-}
+export type { LocalFile };
 
 interface ProductionStore {
   // Current production
@@ -58,7 +61,7 @@ interface ProductionStore {
   updateTimelineTime: () => void;
 
   // Audio player actions
-  loadAudioFile: (file: Partial<MediaFile>) => Promise<void>;
+  loadAudioFile: (localFile: LocalFile) => Promise<void>;
   setAudioPlayingState: (isPlaying: boolean, userInitiated: boolean) => void;
 
   // Soundboard actions
@@ -74,15 +77,15 @@ interface ProductionStore {
 
   // File system actions
   loadDirectory: () => Promise<void>;
+  /** Fallback for browsers without the File System Access API. */
+  loadDirectoryFromFileList: (fileList: FileList) => void;
   rehydrateDirectoryHandle: () => Promise<void>;
   scanDirectory: (
     handle: FileSystemDirectoryHandle,
     path: string,
     files: LocalFile[]
   ) => Promise<void>;
-  loadFileFromHandle: (
-    fileHandle: FileSystemFileHandle
-  ) => Promise<MediaFile | null>;
+  readAudioMetadata: (file: File, path: string) => Promise<MediaFile | null>;
 
   hydrateSoundboard: () => Promise<void>;
 
@@ -273,32 +276,29 @@ export const useProductionStore = create<ProductionStore>()(
         },
 
         // --- Audio Player Actions ---
-        loadAudioFile: async (file) => {
-          if (!file.handle) return;
-          if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-
+        loadAudioFile: async (localFile) => {
           try {
-            const mediaFile = await get().loadFileFromHandle(
-              file.handle as FileSystemFileHandle
+            const file = await readLocalFile(localFile);
+            const mediaFile = await get().readAudioMetadata(
+              file,
+              localFile.path
             );
-            if (mediaFile) {
-              const fileObject = await (
-                file.handle as FileSystemFileHandle
-              ).getFile();
-              currentObjectUrl = URL.createObjectURL(fileObject);
-              set({
-                audioPlayer: {
-                  currentFile: {
-                    ...mediaFile,
-                    handle: file.handle,
-                    src: currentObjectUrl,
-                  } as MediaFile,
-                  // Do not auto-play on load; the player manages play locally
-                  isPlaying: false,
-                  pausedByUser: false,
+            if (!mediaFile) return;
+
+            if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+            currentObjectUrl = URL.createObjectURL(file);
+            set({
+              audioPlayer: {
+                currentFile: {
+                  ...mediaFile,
+                  handle: localFile.handle,
+                  src: currentObjectUrl,
                 },
-              });
-            }
+                // Do not auto-play on load; the player manages play locally
+                isPlaying: false,
+                pausedByUser: false,
+              },
+            });
           } catch (error) {
             console.error("Error loading audio file:", error);
           }
@@ -538,7 +538,7 @@ export const useProductionStore = create<ProductionStore>()(
             const currentPath = `${path}/${entry.name}`;
             if (
               entry.kind === "file" &&
-              (entry.name.endsWith(".mp3") || entry.name.endsWith(".wav"))
+              isAudioFileName(entry.name)
             ) {
               files.push({
                 handle: entry as FileSystemFileHandle,
@@ -558,16 +558,20 @@ export const useProductionStore = create<ProductionStore>()(
           try {
             set({ isScanningFiles: true, localFiles: [] });
             const dirHandle = await window.showDirectoryPicker();
-            await db.fileSystemHandles.put({
-              id: "directory",
-              handle: dirHandle,
-            });
 
             const files: LocalFile[] = [];
             await get().scanDirectory(dirHandle, dirHandle.name, files);
 
             files.sort((a, b) => a.name.localeCompare(b.name));
             set({ localFiles: files, isScanningFiles: false });
+
+            // Remembering the folder is a convenience: if it fails, the
+            // files are still listed for this session.
+            await db.fileSystemHandles
+              .put({ id: "directory", handle: dirHandle })
+              .catch((error) =>
+                console.warn("Could not remember the audio folder:", error)
+              );
           } catch (error) {
             if ((error as Error).name !== "AbortError") {
               console.error("Error loading directory:", error);
@@ -575,7 +579,11 @@ export const useProductionStore = create<ProductionStore>()(
             set({ isScanningFiles: false });
           }
         },
+        loadDirectoryFromFileList: (fileList) => {
+          set({ localFiles: localFilesFromFileList(fileList) });
+        },
         rehydrateDirectoryHandle: async () => {
+          if (!isDirectoryPickerSupported()) return;
           const stored = await db.fileSystemHandles.get("directory");
           if (stored?.handle) {
             const permission = await stored.handle.queryPermission({
@@ -597,31 +605,27 @@ export const useProductionStore = create<ProductionStore>()(
             }
           }
         },
-        loadFileFromHandle: async (fileHandle) => {
-          try {
-            const file = await fileHandle.getFile();
-            const audio = new Audio(URL.createObjectURL(file));
-            return new Promise((resolve) => {
-              audio.onloadedmetadata = () => {
-                const mediaFile: MediaFile = {
-                  id: fileHandle.name,
-                  name: file.name,
-                  path: fileHandle.name,
-                  type: "audio",
-                  size: file.size,
-                  duration: audio.duration,
-                  createdAt: new Date(file.lastModified),
-                };
-                URL.revokeObjectURL(audio.src);
-                resolve(mediaFile);
-              };
-              audio.onerror = () => {
-                resolve(null);
-              };
-            });
-          } catch {
-            return null;
-          }
+        readAudioMetadata: (file, path) => {
+          const url = URL.createObjectURL(file);
+          const audio = new Audio(url);
+          return new Promise((resolve) => {
+            audio.onloadedmetadata = () => {
+              URL.revokeObjectURL(url);
+              resolve({
+                id: path,
+                name: file.name,
+                path,
+                type: "audio",
+                size: file.size,
+                duration: audio.duration,
+                createdAt: new Date(file.lastModified),
+              });
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(url);
+              resolve(null);
+            };
+          });
         },
         hydrateSoundboard: async () => {
           const savedState = await db.soundboard.get(0);
