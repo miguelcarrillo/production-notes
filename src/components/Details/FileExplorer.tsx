@@ -2,15 +2,18 @@ import { Music, Play, RefreshCw } from "lucide-react";
 import React from "react";
 import type { LocalFile } from "../../stores/productionStore";
 import { useProductionStore } from "../../stores/productionStore";
+import { isDirectoryPickerSupported } from "../../utils/localFiles";
+import { LoadFolderButton } from "./LoadFolderButton";
 
 export const FileExplorer: React.FC = () => {
-  const { localFiles, loadAudioFile, loadDirectory, isScanningFiles } =
-    useProductionStore();
+  const localFiles = useProductionStore((s) => s.localFiles);
+  const loadAudioFile = useProductionStore((s) => s.loadAudioFile);
+  const remembersFolder = isDirectoryPickerSupported();
 
   const mediaFiles = localFiles;
 
   const handleLoadAndPlay = (file: LocalFile) => {
-    loadAudioFile({ handle: file.handle });
+    void loadAudioFile(file);
   };
 
   const handlePlayButtonClick = (file: LocalFile, event: React.MouseEvent) => {
@@ -29,16 +32,20 @@ export const FileExplorer: React.FC = () => {
           {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""} in
           project folder
         </p>
-        <button
-          onClick={loadDirectory}
-          disabled={isScanningFiles}
+        <LoadFolderButton
           className="flex items-center space-x-1 text-gray-400 hover:text-white transition disabled:opacity-50"
           title="Refresh File List"
         >
           <RefreshCw className="w-4 h-4" />
           <span className="text-sm">Refresh</span>
-        </button>
+        </LoadFolderButton>
       </div>
+      {!remembersFolder && (
+        <p className="px-4 py-2 text-xs text-amber-300 bg-amber-950/40 border-b border-gray-600">
+          This browser can&apos;t remember your folder, so you&apos;ll pick it
+          again each session. Chrome or Edge keep it between visits.
+        </p>
+      )}
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
@@ -47,7 +54,7 @@ export const FileExplorer: React.FC = () => {
             <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No audio folder loaded</p>
             <p className="text-xs text-gray-500 mt-1">
-              Use the button in the Timeline column.
+              Use the &ldquo;Load Audio Folder&rdquo; button above.
             </p>
           </div>
         ) : (
