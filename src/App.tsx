@@ -1,13 +1,13 @@
-import { useEffect } from "react"; // + Import useEffect
+import { useEffect } from "react";
 import "./App.css";
 import { MainLayout } from "./components/Layout/MainLayout";
-import { useProductionStore } from "./stores/productionStore"; // + Import the store
+import { useProductionStore } from "./stores/productionStore";
 
 function App() {
   useEffect(() => {
     const store = useProductionStore.getState();
     store.hydrateSoundboard();
-    store.rehydrateDirectoryHandle(); // + Add this line
+    store.rehydrateDirectoryHandle();
   }, []);
   return (
     <div className="App">
