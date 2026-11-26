@@ -61,7 +61,7 @@ export const Graphics: React.FC = () => {
       try {
         v.muted = true;
         await v.play();
-      } catch (err) {
+      } catch {
         // Autoplay might be blocked; that's acceptable for authoring
       }
     };
@@ -84,7 +84,7 @@ export const Graphics: React.FC = () => {
           if (m.type === "presenter-ready") setPresenterConnected(true);
           if (m.type === "presenter-disconnect") setPresenterConnected(false);
         };
-      } catch (err) {
+      } catch {
         bcRef.current = null;
       }
     }
@@ -105,7 +105,7 @@ export const Graphics: React.FC = () => {
         try {
           // reload to pick up updated presenter.html (harmless if already fresh)
           w.location.reload();
-        } catch (e) {
+        } catch {
           // reload may fail if cross-origin or blocked; ignore
         }
       }
@@ -118,7 +118,7 @@ export const Graphics: React.FC = () => {
           bcRef.current?.postMessage({ type: "blackout" });
         }
       }, 400);
-    } catch (err) {
+    } catch {
       // opening presenter may fail in some environments; still safe to ignore here
     }
   };
@@ -183,7 +183,7 @@ export const Graphics: React.FC = () => {
           setSlides(rec.slides as Slide[]);
           if ((rec.slides as Slide[]).length > 0) setSelectedIndex(0);
         }
-      } catch (e) {
+      } catch {
         // ignore read errors
       }
     })();
@@ -192,7 +192,9 @@ export const Graphics: React.FC = () => {
 
   // helper to persist slides after edits (call whenever slides mutated outside addSlide)
   const persistSlides = (next: Slide[]) => {
-    try { db.slides.put({ id: "presentation", slides: next }); } catch (e) {}
+    db.slides.put({ id: "presentation", slides: next }).catch((error) => {
+      console.error("Failed to save slides:", error);
+    });
   };
 
   // delete slide
