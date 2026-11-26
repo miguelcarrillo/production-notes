@@ -2,21 +2,17 @@ import { Howl } from "howler";
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
 import { db } from "../db";
+import { searchSounds as searchOpenverse } from "../services/openverse";
 import type {
   AudioPlayerState,
-  FreesoundResult,
   MediaFile,
   Production,
   SoundEffect,
+  SoundSearchResult,
   TimelineState,
 } from "../types/production";
 import { mockProduction, mockSoundEffects } from "../utils/mockData";
 
-// Shape of a sound as returned by the Freesound search API.
-type FreesoundApiSound = Pick<
-  FreesoundResult,
-  "id" | "name" | "previews" | "duration" | "username"
->;
 
 export interface LocalFile {
   handle: FileSystemFileHandle;
@@ -37,10 +33,14 @@ interface ProductionStore {
   // Soundboard state
   soundboard: {
     sounds: SoundEffect[];
-    searchResults: FreesoundResult[];
+    searchResults: SoundSearchResult[];
     isSearching: boolean;
-    playingPreviewId: number | null;
-    nextPageUrl: string | null;
+    searchError: string | null;
+    playingPreviewId: string | null;
+    /** Query, page and total pages of the last search, for pagination. */
+    lastQuery: string | null;
+    page: number;
+    pageCount: number;
   };
 
   localFiles: LocalFile[];
@@ -63,13 +63,14 @@ interface ProductionStore {
 
   // Soundboard actions
   searchSounds: (query: string) => Promise<void>;
+  loadSearchPage: (query: string, page: number) => Promise<void>;
   clearSearchResults: () => void;
-  addSoundToBoard: (sound: FreesoundResult) => void;
+  addSoundToBoard: (sound: SoundSearchResult) => void;
   playSoundEffect: (soundId: string) => void;
   stopSoundEffect: (soundId: string) => void;
   removeSoundFromBoard: (soundId: string) => void;
   setSoundEffectVolume: (soundId: string, volume: number) => void;
-  playPreviewSound: (sound: FreesoundResult) => void;
+  playPreviewSound: (sound: SoundSearchResult) => void;
   stopPreviewSound: () => void;
 
   // File system actions
@@ -121,8 +122,11 @@ export const useProductionStore = create<ProductionStore>()(
           sounds: mockSoundEffects,
           searchResults: [],
           isSearching: false,
+          searchError: null,
           playingPreviewId: null,
-          nextPageUrl: null,
+          lastQuery: null,
+          page: 0,
+          pageCount: 0,
         },
         localFiles: [],
         isScanningFiles: false,
@@ -317,116 +321,59 @@ export const useProductionStore = create<ProductionStore>()(
         },
 
         // --- Soundboard Actions ---
-        searchSounds: async (query) => {
+        searchSounds: (query) => get().loadSearchPage(query, 1),
+
+        loadSearchPage: async (query, page) => {
           set((state) => ({
             soundboard: {
               ...state.soundboard,
               isSearching: true,
-              searchResults: [],
+              searchError: null,
             },
           }));
-          const apiKey = import.meta.env.VITE_FREESOUND_API_KEY;
-          if (!apiKey) {
-            console.error("Freesound API key missing.");
-            set((state) => ({
-              soundboard: { ...state.soundboard, isSearching: false },
-            }));
-            return;
-          }
-          const url = `https://freesound.org/apiv2/search/text/?query=${encodeURIComponent(
-            query
-          )}&page_size=10&fields=id,name,previews,duration,username&token=${apiKey}`;
           try {
-            const response = await fetch(url);
-            if (!response.ok)
-              throw new Error(`API request failed: ${response.statusText}`);
-            const data = await response.json();
-            const mappedResults: FreesoundResult[] = data.results
-              .map((sound: FreesoundApiSound) => ({
-                id: sound.id,
-                name: sound.name,
-                previews: sound.previews,
-                duration: sound.duration,
-                username: sound.username,
-              }))
-              .filter(
-                (sound: FreesoundResult) =>
-                  sound.previews && sound.previews["preview-hq-mp3"]
-              );
+            const result = await searchOpenverse(query, page);
             set((state) => ({
               soundboard: {
                 ...state.soundboard,
-                searchResults: mappedResults,
+                searchResults: result.results,
                 isSearching: false,
-                nextPageUrl: data.next,
+                lastQuery: query,
+                page: result.page,
+                pageCount: result.pageCount,
               },
             }));
           } catch (error) {
-            console.error("Error searching Freesound:", error);
+            console.error("Error searching sounds:", error);
             set((state) => ({
               soundboard: {
                 ...state.soundboard,
-                searchResults: [],
                 isSearching: false,
+                searchError:
+                  error instanceof Error
+                    ? error.message
+                    : "Sound search failed.",
               },
             }));
           }
         },
+
         clearSearchResults: () =>
           set((state) => ({
-            soundboard: { ...state.soundboard, searchResults: [] },
+            soundboard: {
+              ...state.soundboard,
+              searchResults: [],
+              searchError: null,
+              lastQuery: null,
+              page: 0,
+              pageCount: 0,
+            },
           })),
 
         fetchNextPage: async () => {
-          const { nextPageUrl } = get().soundboard;
-          if (!nextPageUrl) return;
-
-          const apiKey = import.meta.env.VITE_FREESOUND_API_KEY;
-          if (!apiKey) {
-            console.error("Freesound API key missing for next page fetch.");
-            return;
-          }
-
-          set((state) => ({
-            soundboard: { ...state.soundboard, isSearching: true },
-          }));
-
-          const urlWithToken = `${nextPageUrl}&token=${apiKey}`;
-
-          try {
-            const response = await fetch(urlWithToken);
-            if (!response.ok)
-              throw new Error(`API request failed: ${response.statusText}`);
-            const data = await response.json();
-
-            const newResults: FreesoundResult[] = data.results
-              .map((sound: FreesoundApiSound) => ({
-                id: sound.id,
-                name: sound.name,
-                previews: sound.previews,
-                duration: sound.duration,
-                username: sound.username,
-              }))
-              .filter(
-                (sound: FreesoundResult) =>
-                  sound.previews && sound.previews["preview-hq-mp3"]
-              );
-
-            set((state) => ({
-              soundboard: {
-                ...state.soundboard,
-                // FIX: Replace the searchResults array instead of appending to it.
-                searchResults: newResults,
-                isSearching: false,
-                nextPageUrl: data.next,
-              },
-            }));
-          } catch (error) {
-            console.error("Error fetching next page:", error);
-            set((state) => ({
-              soundboard: { ...state.soundboard, isSearching: false },
-            }));
-          }
+          const { lastQuery, page, pageCount } = get().soundboard;
+          if (!lastQuery || page >= pageCount) return;
+          await get().loadSearchPage(lastQuery, page + 1);
         },
 
         addSoundToBoard: (sound) =>
@@ -434,10 +381,13 @@ export const useProductionStore = create<ProductionStore>()(
             const newSoundEffect: SoundEffect = {
               id: `sfx-${sound.id}`,
               name: sound.name,
-              url: sound.previews["preview-hq-mp3"],
+              url: sound.previewUrl,
               isPlaying: false,
               volume: 0.7,
-              freesoundId: sound.id,
+              creator: sound.creator,
+              license: sound.license,
+              licenseUrl: sound.licenseUrl,
+              sourceUrl: sound.sourceUrl,
             };
             return {
               soundboard: {
@@ -646,7 +596,7 @@ export const useProductionStore = create<ProductionStore>()(
           }));
 
           previewHowl = new Howl({
-            src: [sound.previews["preview-hq-mp3"]],
+            src: [sound.previewUrl],
             html5: true,
             onend: () => {
               get().stopPreviewSound();

@@ -58,18 +58,26 @@ export interface SoundEffect {
   url: string;
   isPlaying: boolean;
   volume: number;
-  freesoundId?: number; // if from Freesound API
+  /** Attribution, kept so the license travels with the saved soundboard. */
+  creator?: string;
+  license?: string;
+  licenseUrl?: string;
+  sourceUrl?: string;
 }
 
-export interface FreesoundResult {
-  id: number;
+/** A sound returned by the sound search (Openverse). */
+export interface SoundSearchResult {
+  id: string;
   name: string;
-  previews: {
-    "preview-hq-mp3": string;
-    "preview-lq-mp3": string;
-  };
+  previewUrl: string;
+  /** Seconds. */
   duration: number;
-  username: string;
+  creator: string;
+  /** Human-readable license, e.g. "CC BY 4.0". */
+  license: string;
+  licenseUrl?: string;
+  /** Page of the sound on its original site (Freesound). */
+  sourceUrl?: string;
 }
 
 // App state
@@ -79,7 +87,7 @@ export interface AppState {
   audioPlayer: AudioPlayerState;
   soundboard: {
     sounds: SoundEffect[];
-    searchResults: FreesoundResult[];
+    searchResults: SoundSearchResult[];
     isSearching: boolean;
   };
 }

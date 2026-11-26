@@ -1,4 +1,12 @@
-import { ChevronRight, Play, Plus, Search, Square, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Plus,
+  Search,
+  Square,
+  X,
+} from "lucide-react";
 import React, { useState } from "react";
 import { useProductionStore } from "../../stores/productionStore";
 
@@ -15,6 +23,7 @@ export const Soundboard: React.FC = () => {
     playPreviewSound,
     stopPreviewSound,
     fetchNextPage,
+    loadSearchPage,
   } = useProductionStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,10 +77,18 @@ export const Soundboard: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {soundboard.searchError && (
+          <p
+            role="alert"
+            className="m-4 p-3 text-sm text-red-200 bg-red-950/50 rounded-lg"
+          >
+            {soundboard.searchError}
+          </p>
+        )}
+
         {/* Search Results */}
         {soundboard.searchResults.length > 0 && (
           <div className="p-4 border-b border-gray-600 relative">
-            {/* + Close Button for Search Results */}
             <button
               onClick={clearSearchResults}
               className="absolute top-2 right-2 p-1 text-gray-400 hover:text-white"
@@ -80,21 +97,41 @@ export const Soundboard: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center justify-between mb-3">
-              <h5 className="font-medium text-gray-300">Search Results</h5>
-              {/* + Conditionally render the "Next Page" button */}
-              {soundboard.nextPageUrl && (
-                <button
-                  onClick={fetchNextPage}
-                  disabled={soundboard.isSearching}
-                  className="flex items-center mr-4 space-x-1 text-sm text-primary-400 hover:text-primary-300 disabled:opacity-50"
-                  title="Load more results"
-                >
-                  <span>Next</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <h5 className="font-medium text-gray-300">
+                Results for &ldquo;{soundboard.lastQuery}&rdquo;
+              </h5>
+              {soundboard.pageCount > 1 && (
+                <div className="flex items-center mr-6 space-x-2 text-sm text-gray-400">
+                  <button
+                    onClick={() =>
+                      soundboard.lastQuery &&
+                      loadSearchPage(soundboard.lastQuery, soundboard.page - 1)
+                    }
+                    disabled={soundboard.isSearching || soundboard.page <= 1}
+                    className="p-1 hover:text-white disabled:opacity-30"
+                    title="Previous page"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span>
+                    {soundboard.page} / {soundboard.pageCount}
+                  </span>
+                  <button
+                    onClick={fetchNextPage}
+                    disabled={
+                      soundboard.isSearching ||
+                      soundboard.page >= soundboard.pageCount
+                    }
+                    className="p-1 hover:text-white disabled:opacity-30"
+                    title="Next page"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               )}
             </div>
-            {/* + Adjust layout to two columns */}
             <div className="grid grid-cols-2 gap-3">
               {soundboard.searchResults.map((result) => {
                 const isPreviewPlaying =
@@ -109,12 +146,23 @@ export const Soundboard: React.FC = () => {
                       <h6 className="text-sm font-medium text-white truncate">
                         {result.name}
                       </h6>
-                      <p className="text-xs text-gray-400">
-                        {result.duration.toFixed(1)}s • by {result.username}
+                      <p className="text-xs text-gray-400 truncate">
+                        {result.duration.toFixed(1)}s · {result.creator} ·{" "}
+                        {result.licenseUrl ? (
+                          <a
+                            href={result.licenseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-white"
+                          >
+                            {result.license}
+                          </a>
+                        ) : (
+                          result.license
+                        )}
                       </p>
                     </div>
 
-                    {/* + DYNAMIC PREVIEW BUTTON */}
                     <button
                       onClick={() =>
                         isPreviewPlaying
@@ -152,7 +200,6 @@ export const Soundboard: React.FC = () => {
         {/* Sound Effects Grid */}
         <div className="p-4">
           <h5 className="font-medium text-gray-300 mb-3">Sound Effects</h5>
-          {/* + Change grid-cols-2 to grid-cols-3 */}
           <div className="grid grid-cols-4 gap-2">
             {soundboard.sounds.map((sound) => (
               <div
@@ -167,7 +214,7 @@ export const Soundboard: React.FC = () => {
                   <X className="w-3 h-3" />
                 </button>
 
-                {/* + Play/Stop Button: Smaller and Rounder */}
+                {/* Play/Stop */}
                 <button
                   onClick={() => handleSoundToggle(sound.id)}
                   className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-colors ${
@@ -184,7 +231,14 @@ export const Soundboard: React.FC = () => {
                 </button>
 
                 {/* Sound Name */}
-                <h6 className="w-full text-xs font-medium text-white text-center mb-2 truncate">
+                <h6
+                  className="w-full text-xs font-medium text-white text-center mb-2 truncate"
+                  title={
+                    sound.creator
+                      ? `${sound.name} by ${sound.creator} (${sound.license})`
+                      : sound.name
+                  }
+                >
                   {sound.name}
                 </h6>
 
@@ -217,6 +271,27 @@ export const Soundboard: React.FC = () => {
               </p>
             </div>
           )}
+          <p className="mt-6 text-xs text-gray-500">
+            Sounds from{" "}
+            <a
+              href="https://freesound.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-300"
+            >
+              Freesound
+            </a>{" "}
+            via{" "}
+            <a
+              href="https://openverse.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-300"
+            >
+              Openverse
+            </a>
+            , under Creative Commons licenses. Hover a sound for its credit.
+          </p>
         </div>
       </div>
     </div>
