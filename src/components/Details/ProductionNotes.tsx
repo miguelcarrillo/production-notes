@@ -1,11 +1,7 @@
 import React from "react";
 import { useProductionStore } from "../../stores/productionStore";
 
-interface ProductionNotesProps {
-}
-
-export const ProductionNotes: React.FC<ProductionNotesProps> = ({
-}) => {
+export const ProductionNotes: React.FC = () => {
   const { currentProduction, timeline } = useProductionStore();
 
   if (!currentProduction) {
