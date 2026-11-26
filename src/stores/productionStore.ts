@@ -12,6 +12,12 @@ import type {
 } from "../types/production";
 import { mockProduction, mockSoundEffects } from "../utils/mockData";
 
+// Shape of a sound as returned by the Freesound search API.
+type FreesoundApiSound = Pick<
+  FreesoundResult,
+  "id" | "name" | "previews" | "duration" | "username"
+>;
+
 export interface LocalFile {
   handle: FileSystemFileHandle;
   name: string;
@@ -134,15 +140,6 @@ export const useProductionStore = create<ProductionStore>()(
             const newGlobalStartTime =
               state.timeline.globalStartTime || Date.now();
 
-            try {
-              // eslint-disable-next-line no-console
-              console.debug(
-                `[startTimeline] time=${new Date().toISOString()} globalStartTime=${newGlobalStartTime}`
-              );
-            } catch (e) {
-              /* ignore */
-            }
-
             return {
               timeline: {
                 ...state.timeline,
@@ -156,12 +153,6 @@ export const useProductionStore = create<ProductionStore>()(
 
         pauseTimeline: () => {
           // Pause only affects the moment timer, not the global one.
-          try {
-            // eslint-disable-next-line no-console
-            console.debug(`[pauseTimeline] time=${new Date().toISOString()}`);
-          } catch (e) {
-            /* ignore */
-          }
 
           set((state) => ({
             timeline: {
@@ -313,17 +304,6 @@ export const useProductionStore = create<ProductionStore>()(
           }
         },
         setAudioPlayingState: (isPlaying, userInitiated) => {
-          // Debug: log callers of this action to trace unexpected invocations
-          try {
-            // eslint-disable-next-line no-console
-            console.debug(
-              `[setAudioPlayingState] isPlaying=${isPlaying} userInitiated=${userInitiated} time=${new Date().toISOString()}`
-            );
-            // eslint-disable-next-line no-console
-            console.debug(new Error("setAudioPlayingState stack").stack);
-          } catch (e) {
-            /* ignore logging errors */
-          }
 
           return set((state) => ({
             audioPlayer: {
@@ -362,7 +342,7 @@ export const useProductionStore = create<ProductionStore>()(
               throw new Error(`API request failed: ${response.statusText}`);
             const data = await response.json();
             const mappedResults: FreesoundResult[] = data.results
-              .map((sound: any) => ({
+              .map((sound: FreesoundApiSound) => ({
                 id: sound.id,
                 name: sound.name,
                 previews: sound.previews,
@@ -420,7 +400,7 @@ export const useProductionStore = create<ProductionStore>()(
             const data = await response.json();
 
             const newResults: FreesoundResult[] = data.results
-              .map((sound: any) => ({
+              .map((sound: FreesoundApiSound) => ({
                 id: sound.id,
                 name: sound.name,
                 previews: sound.previews,
@@ -639,7 +619,7 @@ export const useProductionStore = create<ProductionStore>()(
                 resolve(null);
               };
             });
-          } catch (error) {
+          } catch {
             return null;
           }
         },

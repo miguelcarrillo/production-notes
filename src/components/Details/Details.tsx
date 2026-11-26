@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { FolderOpen, Play } from "lucide-react";
 import AudioPlayer, {
   type InterfaceGridTemplateArea,
@@ -38,19 +38,6 @@ export const AudioPlayerComponent: React.FC = () => {
   // Audio player now manages its own playback state locally; we do not
   // update the global store on play/pause to avoid coupling/toggling.
 
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line no-console
-      console.debug(`[AudioPlayerComponent] mount currentFile=${currentFile?.id}`);
-    } catch (e) {}
-
-    return () => {
-      try {
-        // eslint-disable-next-line no-console
-        console.debug("[AudioPlayerComponent] unmount");
-      } catch (e) {}
-    };
-  }, []);
 
   const handleDrop = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -75,16 +62,15 @@ export const AudioPlayerComponent: React.FC = () => {
       {
         name: currentFile.name,
         writer: currentFile.path.split("/").pop()?.split(".")[0] || "Unknown",
-        img: "/vinyl-record.png",
         src: currentFile.src!,
         id: stringToHash(currentFile.id),
       },
     ];
-  }, [currentFile?.id, currentFile?.src]);
+  }, [currentFile]);
 
   const memoAudioInitialState = React.useMemo(
     () => ({ isPlaying: false, curPlayId: currentFile ? stringToHash(currentFile.id) : 0 }),
-    [currentFile?.id]
+    [currentFile]
   );
 
   if (!currentFile || !currentFile.src) {
@@ -129,9 +115,7 @@ export const AudioPlayerComponent: React.FC = () => {
           },
           volumeSlider: "right",
         }}
-        rootContainerProps={{
-          colorScheme: "dark",
-        }}
+        colorScheme="dark"
       />
     </div>
   );

@@ -1,52 +1,4 @@
-import type { MediaFile, Moment, Production } from "../types/production";
-
-const mockMediaFiles: MediaFile[] = [
-  {
-    id: "1",
-    name: "ambient-forest.mp3",
-    path: "/audio/ambient-forest.mp3",
-    type: "audio",
-    size: 2450000,
-    duration: 180,
-    createdAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    name: "dramatic-music.mp3",
-    path: "/audio/dramatic-music.mp3",
-    type: "audio",
-    size: 3200000,
-    duration: 240,
-    createdAt: new Date("2024-01-15"),
-  },
-  {
-    id: "3",
-    name: "crowd-applause.mp3",
-    path: "/audio/crowd-applause.mp3",
-    type: "audio",
-    size: 1800000,
-    duration: 120,
-    createdAt: new Date("2024-01-16"),
-  },
-  {
-    id: "4",
-    name: "rain-storm.mp3",
-    path: "/audio/rain-storm.mp3",
-    type: "audio",
-    size: 4100000,
-    duration: 300,
-    createdAt: new Date("2024-01-16"),
-  },
-  {
-    id: "5",
-    name: "bell-chime.mp3",
-    path: "/audio/bell-chime.mp3",
-    type: "audio",
-    size: 450000,
-    duration: 15,
-    createdAt: new Date("2024-01-17"),
-  },
-];
+import type { Moment, Production } from "../types/production";
 
 const mockMoments: Moment[] = [
   {
@@ -227,17 +179,3 @@ export const mockSoundEffects = [
     volume: 0.6,
   },
 ];
-
-// Utility functions
-export const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
-};
-
-export const parseDuration = (duration: string): number => {
-  const [mins, secs] = duration.split(":").map(Number);
-  return mins * 60 + secs;
-};

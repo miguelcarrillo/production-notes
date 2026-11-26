@@ -7,7 +7,7 @@ Focus: small React + TypeScript frontend built with Vite. Primary concerns are s
   - Single-page React app (entry: `src/main.tsx`, top component `src/App.tsx`).
   - Global app state lives in the Zustand store at `src/stores/productionStore.ts`.
   - Persistent storage uses Dexie (IndexedDB) and is configured in `src/db.ts`.
-  - Local audio files are accessed via the browser File System Access API; helpers in `src/utils/fileSystem.ts`.
+  - Local audio files are accessed via the browser File System Access API; the logic lives in the store (`loadDirectory`, `scanDirectory`, `loadFileFromHandle`).
   - Audio playback uses Howler (`howler`) for soundboard previews/playing; the main player uses HTMLAudio via object URLs.
 
 - Key project patterns & conventions (use these exactly)
@@ -26,7 +26,7 @@ Focus: small React + TypeScript frontend built with Vite. Primary concerns are s
 - Environment / integration points
   - Freesound integration: `src/stores/productionStore.ts` calls Freesound API; it requires `VITE_FREESOUND_API_KEY` in the environment (Vite will expose it to the client if prefixed with `VITE_`).
   - IndexedDB database name: `productionNotesDB` (see `src/db.ts`). Use browser devtools > Application > IndexedDB to inspect during debugging.
-  - File System Access API is required for directory picker; features will degrade gracefully to `input[type=file]` fallback in `src/utils/fileSystem.ts`.
+  - File System Access API is required for the directory picker (Chromium-based browsers only).
 
 - How to make safe changes
   - To add UI features, prefer adding actions to `productionStore.ts`. Keep logic for side-effects (file access, Dexie calls, fetch) inside the store to preserve single source of truth.

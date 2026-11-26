@@ -30,7 +30,7 @@ export const Timeline: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timeline.isPlaying, updateTimelineTime]);
+  }, [timeline.globalStartTime, updateTimelineTime]);
 
   // Scroll the active moment into view when the currentMomentIndex changes
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { Pause, Play, SkipForward, SkipBack } from "lucide-react";
 import React from "react";
 import { useProductionStore } from "../../stores/productionStore";
-import { formatDuration } from "../../utils/mockData";
+import { formatDuration } from "../../utils/time";
 
 export const TimeControl: React.FC = () => {
   const {
