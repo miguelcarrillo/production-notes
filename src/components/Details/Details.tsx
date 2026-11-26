@@ -5,6 +5,7 @@ import AudioPlayer, {
   type PlayList,
 } from "react-modern-audio-player";
 import { FileExplorer } from "./FileExplorer";
+import { LoadFolderButton } from "./LoadFolderButton";
 import { useProductionStore } from "../../stores/productionStore";
 
 const stringToHash = (str: string): number => {
@@ -45,7 +46,7 @@ export const AudioPlayerComponent: React.FC = () => {
     const filePath = e.dataTransfer.getData("application/local-file-path");
     if (filePath) {
       const fileToLoad = localFiles.find((f) => f.path === filePath);
-      if (fileToLoad) loadAudioFile({ handle: fileToLoad.handle });
+      if (fileToLoad) void loadAudioFile(fileToLoad);
     }
   };
 
@@ -122,20 +123,16 @@ export const AudioPlayerComponent: React.FC = () => {
 };
 
 export const Details: React.FC = () => {
-  const { loadDirectory, isScanningFiles } = useProductionStore();
+  const isScanningFiles = useProductionStore((s) => s.isScanningFiles);
 
   return (
     <div className="h-full flex flex-col">
       {/* Local File Loader (moved from Timeline) */}
       <div className="p-4 border-b border-gray-700">
-        <button
-          onClick={loadDirectory}
-          disabled={isScanningFiles}
-          className="w-full flex items-center justify-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50"
-        >
+        <LoadFolderButton className="w-full flex items-center justify-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors disabled:opacity-50">
           <FolderOpen className="w-5 h-5" />
           <span>{isScanningFiles ? "Scanning..." : "Load Audio Folder"}</span>
-        </button>
+        </LoadFolderButton>
       </div>
 
       {/* Audio Player */}
