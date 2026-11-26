@@ -1,7 +1,7 @@
 <!-- .github/copilot-instructions.md for production-notes -->
 # Quick instructions for AI coding agents
 
-Focus: small React + TypeScript frontend built with Vite. Primary concerns are state (Zustand), local persistence (Dexie + IndexedDB), and local audio file handling (File System Access API + Howler).
+Focus: small React + TypeScript frontend built with Vite. Primary concerns are state (Zustand), local persistence (Dexie + IndexedDB), local audio file handling (File System Access API + Howler), and sound search (Openverse).
 
 - Big picture
   - Single-page React app (entry: `src/main.tsx`, top component `src/App.tsx`).
@@ -24,7 +24,7 @@ Focus: small React + TypeScript frontend built with Vite. Primary concerns are s
   - Lint: `npm run lint` (ESLint configured to check `.ts`/`.tsx`).
 
 - Environment / integration points
-  - Freesound integration: `src/stores/productionStore.ts` calls Freesound API; it requires `VITE_FREESOUND_API_KEY` in the environment (Vite will expose it to the client if prefixed with `VITE_`).
+  - Sound search: `src/services/openverse.ts` calls the Openverse audio API (Freesound sounds, Creative Commons). No API key or env vars are needed; anonymous limits are 100 requests/min and 1,000/day per IP. Keep the creator and license on every `SoundEffect` so attribution is shown.
   - IndexedDB database name: `productionNotesDB` (see `src/db.ts`). Use browser devtools > Application > IndexedDB to inspect during debugging.
   - File System Access API is required for the directory picker (Chromium-based browsers only).
 
